@@ -11,10 +11,7 @@ func Test(t *testing.T) {
 	if err != nil {
 		t.Error("file read err=", err)
 	}
-	emfFile, err := ReadFile(data)
-	if err != nil {
-		t.Error("emf read err=", err)
-	}
+	emfFile := ReadFile(data)
 
 	fmt.Printf("header type=%x size=%x \n", emfFile.Header.Type, emfFile.Header.Size)
 }

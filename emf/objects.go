@@ -3,12 +3,12 @@ package emf
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"image/color"
+	"math"
 	"os"
 	"unicode/utf16"
 
-	"github.com/llgcode/draw2d"
+	log "github.com/sirupsen/logrus"
+	"github.com/tdewolff/canvas"
 )
 
 type LogPaletteEntry struct {
@@ -64,7 +64,7 @@ func readLogPenEx(reader *bytes.Reader) (LogPenEx, error) {
 
 type LogBrushEx struct {
 	BrushStyle uint32
-	Color      ColorRef
+	ColorRef   ColorRef
 	BrushHatch uint32
 }
 
@@ -190,45 +190,65 @@ func readLogFont(reader *bytes.Reader) (LogFont, error) {
 	}
 
 	for i := range bTrim {
-		fmt.Printf("%04x ", bTrim[i])
+		log.Tracef("%04x ", bTrim[i])
 	}
-	fmt.Println()
 
 	r.Facename = string(utf16.Decode(bTrim))
 
-	fmt.Printf("font name raw=%s\n", r.Facename)
+	log.Tracef("font name raw=%s\n", r.Facename)
 
 	return r, nil
 }
 
-func (m LogFont) GetFontData() draw2d.FontData {
-	fontData := draw2d.FontData{Name: m.Facename, Family: draw2d.FontFamilySans}
-	family := (m.PitchAndFamily & 0xF0) >> 4
-	if family == 0x01 || family == 0x04 || family == 0x05 { // FF_ROMAN, FF_SCRIPT, FF_DECORATIVE
-		fontData.Family = draw2d.FontFamilySerif
-	} else if family == 0x03 { // FF_MODERN
-		fontData.Family = draw2d.FontFamilyMono
-	}
+func (m LogFont) GetFontFace() *canvas.FontFace {
 
-	if m.Weight >= 700 {
-		fontData.Style = fontData.Style | draw2d.FontStyleBold
+	var fontStyle canvas.FontStyle
+
+	switch m.Weight {
+	case 100:
+		fontStyle = canvas.FontExtraLight
+	case 200:
+		fontStyle = canvas.FontLight
+	case 300:
+		fontStyle = canvas.FontBook
+	case 500:
+		fontStyle = canvas.FontMedium
+	case 600:
+		fontStyle = canvas.FontSemibold
+	case 700:
+		fontStyle = canvas.FontBold
+	case 800:
+		fontStyle = canvas.FontBlack
+	case 900:
+		fontStyle = canvas.FontExtraBlack
+	default:
+		fontStyle = canvas.FontRegular
 	}
 
 	if m.Italic == 0x01 {
-		fontData.Style = fontData.Style | draw2d.FontStyleItalic
+		fontStyle = fontStyle | canvas.FontItalic
 	}
 
-	return fontData
+	var fontDeco []canvas.FontDecorator
+
+	if m.StrikeOut == 0x01 {
+		fontDeco = append(fontDeco, canvas.FontStrikethrough)
+	}
+
+	if m.Underline == 0x01 {
+		fontDeco = append(fontDeco, canvas.FontUnderline)
+	}
+
+	ff := canvas.NewFontFamily(m.Facename)
+	_ = ff.LoadLocalFont(m.Facename, fontStyle)
+
+	fontFace := ff.Face(math.Abs(float64(m.Height)), canvas.Black, fontStyle, canvas.FontNormal, fontDeco...)
+
+	return &fontFace
 }
 
 // MS-WMF types
-type ColorRef struct {
-	Red, Green, Blue, _ uint8
-}
-
-func (c ColorRef) GetColor() color.RGBA {
-	return color.RGBA{c.Red, c.Green, c.Blue, 0xff}
-}
+type ColorRef uint32
 
 type SizeL struct {
 	// MS-WMF says it's 32-bit unsigned integer

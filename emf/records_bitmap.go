@@ -3,12 +3,10 @@ package emf
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"image"
-	"image/draw"
 	"os"
 
-	"github.com/disintegration/imaging"
+	log "github.com/sirupsen/logrus"
 )
 
 type bitmapRecord struct {
@@ -143,7 +141,8 @@ func (r *bitmapRecord) readImage() image.Image {
 	}[r.BmiSrc.BitCount]
 
 	if !ok {
-		fmt.Fprintln(os.Stderr, "emf: unsupported bitmap type", r.BmiSrc.BitCount)
+
+		log.Error("Unsupported bitmap type ", r.BmiSrc.BitCount)
 		return nil
 	}
 
@@ -191,7 +190,7 @@ func (r *bitmapRecord) readImage() image.Image {
 
 	case BI_BITCOUNT_4:
 		if r.BmiSrc.Compression != BI_RGB {
-			fmt.Fprintln(os.Stderr, "emf: unsupported compression type", r.BmiSrc.Compression)
+			log.Error("Unsupported compression type ", r.BmiSrc.Compression)
 			return nil
 		}
 
@@ -235,26 +234,15 @@ func (r *bitmapRecord) readImage() image.Image {
 	return nil
 }
 
-func (r *bitmapRecord) Draw(ctx *context) {
+func (r *bitmapRecord) Draw(ctx *EmfContext) {
 	img := r.readImage()
 	if img == nil {
 		return
 	}
 
-	// dest image rectangle
-	tx, ty := ctx.GetMatrixTransform().GetTranslation()
-	rect := image.Rect(
-		int(r.Bounds.Left)+int(tx), int(r.Bounds.Top)+int(ty),
-		int(r.Bounds.Right)+int(tx), int(r.Bounds.Bottom)+int(ty))
+	// FIXME : resize image to fit Bound
 
-	// Record bounds often differs for 1px with image size.
-	// Call scaling only if image size is bigger than record bounds because
-	// this procedure is very expensive.
-	if img.Bounds().Dx() > rect.Dx()+1 && img.Bounds().Dy() > rect.Dy()+1 {
-		img = imaging.Resize(img, rect.Dx(), rect.Dy(), imaging.CatmullRom)
-	}
-
-	draw.Draw(ctx.img, rect, img, image.ZP, draw.Over)
+	ctx.DrawImage(float64(r.Bounds.Left), float64(r.Bounds.Top), img, 300)
 }
 
 type BitbltRecord struct {
