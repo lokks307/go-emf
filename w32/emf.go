@@ -1,6 +1,9 @@
 package w32
 
-import "unsafe"
+import (
+	"syscall"
+	"unsafe"
+)
 
 type XFORM struct {
 	M11, M12, M21, M22, Dx, Dy float32
@@ -25,8 +28,11 @@ var (
 	strokeAndFillPath     = gdi32.NewProc("StrokeAndFillPath")
 	strokePath            = gdi32.NewProc("StrokePath")
 	createPenIndirect     = gdi32.NewProc("CreatePenIndirect")
-	createFontIndirectW   = gdi32.NewProc("CreateFontIndirectW")
 	createFontIndirectExW = gdi32.NewProc("CreateFontIndirectExW")
+	extTextOutW           = gdi32.NewProc("ExtTextOutW")
+	polyBezierTo          = gdi32.NewProc("PolyBezierTo")
+	polylineTo            = gdi32.NewProc("PolylineTo")
+	polyPolygon           = gdi32.NewProc("PolyPolygon")
 )
 
 func SetWindowExtEx(hdc HDC, x, y int, lpSize *POINT) bool {
@@ -174,9 +180,47 @@ func CreatePenIndirect(plpen *LOGPEN) HPEN {
 	return HPEN(ret)
 }
 
-func CreateFontIndirectW(lplf *LOGFONT) HFONT {
-	ret, _, _ := createFontIndirectW.Call(
-		uintptr(unsafe.Pointer(lplf)),
+func ExtTextOutW(hdc HDC, x, y int, options uint, lprect *RECT, lpString string, c uint, lpDx []int) bool {
+
+	lpStringUint16 := syscall.StringToUTF16Ptr(lpString)
+
+	ret, _, _ := extTextOutW.Call(
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y),
+		uintptr(options),
+		uintptr(unsafe.Pointer(lprect)),
+		uintptr(unsafe.Pointer(lpStringUint16)),
+		uintptr(c),
+		uintptr(unsafe.Pointer(&lpDx[0])),
 	)
-	return HFONT(ret)
+	return ret != 0
+}
+
+func PolyBezierTo(hdc HDC, apt []POINT, cpt DWORD) bool {
+	ret, _, _ := polyBezierTo.Call(
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(&apt[0])),
+		uintptr(cpt),
+	)
+	return ret != 0
+}
+
+func PolylineTo(hdc HDC, apt []POINT, cpt DWORD) bool {
+	ret, _, _ := polylineTo.Call(
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(&apt[0])),
+		uintptr(cpt),
+	)
+	return ret != 0
+}
+
+func PolyPolygon(hdc HDC, apt []POINT, asz []int, csz int) bool {
+	ret, _, _ := polyPolygon.Call(
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(&apt[0])),
+		uintptr(unsafe.Pointer(&asz[0])),
+		uintptr(csz),
+	)
+	return ret != 0
 }

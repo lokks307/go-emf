@@ -282,7 +282,7 @@ var (
 
 	getDeviceCaps             = gdi32.NewProc("GetDeviceCaps")
 	deleteObject              = gdi32.NewProc("DeleteObject")
-	createFontIndirect        = gdi32.NewProc("CreateFontIndirectW")
+	createFontIndirectW       = gdi32.NewProc("CreateFontIndirectW")
 	abortDoc                  = gdi32.NewProc("AbortDoc")
 	bitBlt                    = gdi32.NewProc("BitBlt")
 	maskBlt                   = gdi32.NewProc("MaskBlt")
@@ -2853,8 +2853,8 @@ func DeleteObject(hObject HGDIOBJ) bool {
 	return ret != 0
 }
 
-func CreateFontIndirect(logFont *LOGFONT) HFONT {
-	ret, _, _ := createFontIndirect.Call(uintptr(unsafe.Pointer(logFont)))
+func CreateFontIndirectW(logFont *LOGFONT) HFONT {
+	ret, _, _ := createFontIndirectW.Call(uintptr(unsafe.Pointer(logFont)))
 	return HFONT(ret)
 }
 
@@ -3029,13 +3029,13 @@ func EndPage(hdc HDC) int {
 	return int(ret)
 }
 
-func ExtCreatePen(dwPenStyle, dwWidth uint, lplb *LOGBRUSH, dwStyleCount uint, lpStyle *uint) HPEN {
+func ExtCreatePen(dwPenStyle, dwWidth uint, lplb *LOGBRUSH, dwStyleCount uint, lpStyle []uint) HPEN {
 	ret, _, _ := extCreatePen.Call(
 		uintptr(dwPenStyle),
 		uintptr(dwWidth),
 		uintptr(unsafe.Pointer(lplb)),
 		uintptr(dwStyleCount),
-		uintptr(unsafe.Pointer(lpStyle)),
+		uintptr(unsafe.Pointer(&lpStyle[0])),
 	)
 	return HPEN(ret)
 }
@@ -3426,29 +3426,29 @@ func Chord(hdc HDC, x1, y1, x2, y2, x3, y3, x4, y4 int) bool {
 	return ret != 0
 }
 
-func Polygon(hdc HDC, p []POINT) bool {
+func Polygon(hdc HDC, apt []POINT, cpt int) bool {
 	ret, _, _ := polygon.Call(
 		uintptr(hdc),
-		uintptr(unsafe.Pointer(&p[0])),
-		uintptr(len(p)),
+		uintptr(unsafe.Pointer(&apt[0])),
+		uintptr(cpt),
 	)
 	return ret != 0
 }
 
-func Polyline(hdc HDC, p []POINT) bool {
+func Polyline(hdc HDC, apt []POINT, cpt int) bool {
 	ret, _, _ := polyline.Call(
 		uintptr(hdc),
-		uintptr(unsafe.Pointer(&p[0])),
-		uintptr(len(p)),
+		uintptr(unsafe.Pointer(&apt[0])),
+		uintptr(cpt),
 	)
 	return ret != 0
 }
 
-func PolyBezier(hdc HDC, p []POINT) bool {
+func PolyBezier(hdc HDC, apt []POINT, cpt DWORD) bool {
 	ret, _, _ := polyBezier.Call(
 		uintptr(hdc),
-		uintptr(unsafe.Pointer(&p[0])),
-		uintptr(len(p)),
+		uintptr(unsafe.Pointer(&apt[0])),
+		uintptr(cpt),
 	)
 	return ret != 0
 }

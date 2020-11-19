@@ -324,3 +324,17 @@ const (
 	EASTEUROPE_CHARSET  = 0x000000EE
 	OEM_CHARSET         = 0x000000FF
 )
+
+// TextAlignmentMode [MS-WMF]
+
+const (
+	TA_NOUPDATECP = 0x0000
+	TA_LEFT       = 0x0000
+	TA_TOP        = 0x0000
+	TA_UPDATECP   = 0x0001
+	TA_RIGHT      = 0x0002
+	TA_CENTER     = 0x0003
+	TA_BOTTOM     = 0x0008
+	TA_BASELINE   = 0x0018
+	TA_RTLREADING = 0x0100
+)

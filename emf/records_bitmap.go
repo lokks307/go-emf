@@ -6,12 +6,13 @@ import (
 	"image"
 	"os"
 
+	"github.com/lokks307/go-emf/w32"
 	log "github.com/sirupsen/logrus"
 )
 
 type bitmapRecord struct {
 	Record
-	Bounds                       RectL
+	Bounds                       w32.RECT
 	xDest, yDest, cxDest, cyDest int32
 	BitBltRasterOperation        uint32
 	xSrc, ySrc                   int32
@@ -240,9 +241,6 @@ func (r *bitmapRecord) Draw(ctx *EmfContext) {
 		return
 	}
 
-	// FIXME : resize image to fit Bound
-
-	ctx.DrawImage(float64(r.Bounds.Left), float64(r.Bounds.Top), img, 300)
 }
 
 type BitbltRecord struct {

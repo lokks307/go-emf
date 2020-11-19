@@ -75,6 +75,13 @@ func (r *RECT) Height() int32 {
 	return r.Bottom - r.Top
 }
 
+func (r *RECT) Center() POINT {
+	return POINT{
+		X: r.Left + r.Width()/2,
+		Y: r.Top + r.Height()/2,
+	}
+}
+
 // http://msdn.microsoft.com/en-us/library/windows/desktop/ms633577.aspx
 type WNDCLASSEX struct {
 	Size       uint32
@@ -307,6 +314,15 @@ type LOGPEN struct {
 	LopnStyle uint32
 	LopnWidth POINT
 	LopnColor COLORREF
+}
+type LOGPENEX struct {
+	PenStyle        uint32
+	Width           uint32
+	BrushStyle      uint32
+	ColorRef        COLORREF
+	BrushHatch      uint32
+	NumStyleEntries uint32
+	StyleEntry      []uint32
 }
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd183565.aspx

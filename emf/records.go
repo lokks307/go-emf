@@ -9,7 +9,6 @@ import (
 
 	"github.com/lokks307/go-emf/w32"
 	log "github.com/sirupsen/logrus"
-	"github.com/tdewolff/canvas"
 )
 
 type Recorder interface {
@@ -62,7 +61,7 @@ type HeaderExtension2 struct {
 }
 
 type HeaderOriginal struct {
-	Bounds, Frame           RectL
+	Bounds, Frame           w32.RECT
 	RecordSignature         uint32
 	Version, Bytes, Records uint32
 	Handles                 uint16
@@ -145,7 +144,7 @@ func (r *SetwindowextexRecord) Draw(ctx *EmfContext) {
 
 type SetwindoworgexRecord struct {
 	Record
-	Origin PointL
+	Origin w32.POINT
 }
 
 func readSetwindoworgexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -193,7 +192,7 @@ func (r *SetviewportextexRecord) Draw(ctx *EmfContext) {
 
 type SetviewportorgexRecord struct {
 	Record
-	Origin PointL
+	Origin w32.POINT
 }
 
 func readSetviewportorgexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -407,7 +406,7 @@ func (r *SetbkcolorRecord) Draw(ctx *EmfContext) {
 
 type MovetoexRecord struct {
 	Record
-	Offset PointL
+	Offset w32.POINT
 }
 
 func readMovetoexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -431,7 +430,7 @@ func (r *MovetoexRecord) Draw(ctx *EmfContext) {
 
 type IntersectcliprectRecord struct {
 	Record
-	Clip RectL
+	Clip w32.RECT
 }
 
 func readIntersectcliprectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -566,25 +565,6 @@ func readSelectobjectRecord(reader *bytes.Reader, size uint32) (Recorder, error)
 	return r, nil
 }
 
-var StockObjects = map[uint32]interface{}{
-	WHITE_BRUSH:         LogBrushEx{BrushStyle: BS_SOLID, ColorRef: 0x00FFFFFF},
-	LTGRAY_BRUSH:        LogBrushEx{BrushStyle: BS_SOLID, ColorRef: 0x00C0C0C0},
-	GRAY_BRUSH:          LogBrushEx{BrushStyle: BS_SOLID, ColorRef: 0x00808080},
-	DKGRAY_BRUSH:        LogBrushEx{BrushStyle: BS_SOLID, ColorRef: 0x00404040},
-	BLACK_BRUSH:         LogBrushEx{BrushStyle: BS_SOLID, ColorRef: 0x00000000},
-	NULL_BRUSH:          LogBrushEx{BrushStyle: BS_NULL},
-	WHITE_PEN:           LogPen{PenStyle: PS_COSMETIC | PS_SOLID, ColorRef: 0x00FFFFFF, Width: PointL{1, 0}},
-	BLACK_PEN:           LogPen{PenStyle: PS_COSMETIC | PS_SOLID, ColorRef: 0x00000000, Width: PointL{1, 0}},
-	NULL_PEN:            LogPen{PenStyle: PS_NULL},
-	OEM_FIXED_FONT:      LogFont{CharSet: OEM_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + FIXED_PITCH)},
-	ANSI_FIXED_FONT:     LogFont{CharSet: ANSI_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + FIXED_PITCH)},
-	ANSI_VAR_FONT:       LogFont{CharSet: ANSI_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + VARIABLE_PITCH)},
-	SYSTEM_FONT:         LogFont{Height: 11},
-	DEVICE_DEFAULT_FONT: LogFont{Height: 11},
-	SYSTEM_FIXED_FONT:   LogFont{Height: 11},
-	DEFAULT_GUI_FONT:    LogFont{Height: 11},
-}
-
 // FIXME: handle following stockobject
 // DEFAULT_PALETTE, DC_BRUSH, DC_PEN
 
@@ -602,44 +582,22 @@ func (r *SelectobjectRecord) Draw(ctx *EmfContext) {
 	}
 
 	switch gdiObject.(type) {
-	case LogPen:
-		pen := gdiObject.(LogPen)
-		plpen := w32.LOGPEN{
-			LopnStyle: pen.PenStyle,
-			LopnWidth: w32.POINT(pen.Width),
-			LopnColor: w32.COLORREF(pen.ColorRef),
-		}
-		hpen := w32.CreatePenIndirect(&plpen)
+	case w32.HPEN:
+		hpen := gdiObject.(w32.HPEN)
 		w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hpen))
-	case LogPenEx:
-		pen := gdiObject.(LogPenEx)
-		plpen := w32.LOGPEN{
-			LopnStyle: pen.PenStyle,
-			LopnWidth: w32.POINT{X: int32(pen.Width), Y: 0},
-			LopnColor: w32.COLORREF(pen.ColorRef),
-		}
-		hpen := w32.CreatePenIndirect(&plpen)
-		w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hpen))
-	case LogBrushEx:
-		brushex := gdiObject.(LogBrushEx)
-		plpen := w32.LOGBRUSH{
-			LbStyle: brushex.BrushStyle,
-			LbColor: w32.COLORREF(brushex.ColorRef),
-			LbHatch: 0,
-		}
-		hbrush := w32.CreateBrushIndirect(&plpen)
+	case w32.HBRUSH:
+		hbrush := gdiObject.(w32.HBRUSH)
 		w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hbrush))
-	case LogFont:
-		w32logfont := gdiObject.(w32.LOGFONT)
-		hlogfont := w32.CreateFontIndirectW(&w32logfont)
-		w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hlogfont))
+	case w32.HFONT:
+		hfont := gdiObject.(w32.HFONT)
+		w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hfont))
 	}
 }
 
 type CreatepenRecord struct {
 	Record
 	ihPen  uint32
-	LogPen LogPen
+	LogPen w32.LOGPEN
 }
 
 func readCreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -660,13 +618,13 @@ func readCreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *CreatepenRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_CREATEPEN")
 
-	ctx.Objects[r.ihPen] = r.LogPen
+	ctx.Objects[r.ihPen] = w32.CreatePenIndirect(&r.LogPen)
 }
 
 type CreatebrushindirectRecord struct {
 	Record
 	ihBrush  uint32
-	LogBrush LogBrushEx
+	LogBrush w32.LOGBRUSH
 }
 
 func readCreatebrushindirectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -687,7 +645,7 @@ func readCreatebrushindirectRecord(reader *bytes.Reader, size uint32) (Recorder,
 func (r *CreatebrushindirectRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_CREATEBRUSHINDIRECT")
 
-	ctx.Objects[r.ihBrush] = r.LogBrush
+	ctx.Objects[r.ihBrush] = w32.CreateBrushIndirect(&r.LogBrush)
 }
 
 type DeleteobjectRecord struct {
@@ -714,7 +672,7 @@ func (r *DeleteobjectRecord) Draw(ctx *EmfContext) {
 
 type RectangleRecord struct {
 	Record
-	Box RectL
+	Box w32.RECT
 }
 
 func readRectangleRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -737,9 +695,9 @@ func (r *RectangleRecord) Draw(ctx *EmfContext) {
 
 type ArcRecord struct {
 	Record
-	Box   RectL
-	Start PointL
-	End   PointL
+	Box   w32.RECT
+	Start w32.POINT
+	End   w32.POINT
 }
 
 func readArcRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -770,7 +728,7 @@ func (r *ArcRecord) Draw(ctx *EmfContext) {
 
 type LinetoRecord struct {
 	Record
-	Point PointL
+	Point w32.POINT
 }
 
 func readLinetoRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -841,7 +799,7 @@ func (r *ClosefigureRecord) Draw(ctx *EmfContext) {
 
 type FillpathRecord struct {
 	Record
-	Bounds RectL
+	Bounds w32.RECT
 }
 
 func readFillpathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -867,7 +825,7 @@ func (r *FillpathRecord) Draw(ctx *EmfContext) {
 
 type StrokeandfillpathRecord struct {
 	Record
-	Bounds RectL
+	Bounds w32.RECT
 }
 
 func readStrokeandfillpathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -893,7 +851,7 @@ func (r *StrokeandfillpathRecord) Draw(ctx *EmfContext) {
 
 type StrokepathRecord struct {
 	Record
-	Bounds RectL
+	Bounds w32.RECT
 }
 
 func readStrokepathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -944,7 +902,7 @@ func readCommentRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 type ExtcreatefontindirectwRecord struct {
 	Record
 	ihFonts uint32
-	elw     LogFont
+	elw     w32.LOGFONT
 }
 
 func readExtcreatefontindirectwRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -971,12 +929,12 @@ func readExtcreatefontindirectwRecord(reader *bytes.Reader, size uint32) (Record
 func (r *ExtcreatefontindirectwRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_EXTCREATEFONTINDIRECTW")
 
-	ctx.Objects[r.ihFonts] = r.elw
+	ctx.Objects[r.ihFonts] = w32.CreateFontIndirectW(&r.elw)
 }
 
 type ExttextoutwRecord struct {
 	Record
-	Bounds           RectL
+	Bounds           w32.RECT
 	iGraphicsMode    uint32
 	exScale, eyScale float32
 	wEmrText         EmrText
@@ -1011,18 +969,32 @@ func readExttextoutwRecord(reader *bytes.Reader, size uint32) (Recorder, error) 
 	return r, nil
 }
 
-func (m *ExttextoutwRecord) Draw(ctx *EmfContext) {
+func (r *ExttextoutwRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_EXTTEXTOUTW")
 
-	width := float64(m.Bounds.Right - m.Bounds.Left)
-	height := float64(m.Bounds.Bottom - m.Bounds.Top)
-	text := canvas.NewTextBox(*ctx.FontFace, m.wEmrText.OutputString, width, height, canvas.Left, canvas.Center, 0, 100)
-	ctx.DrawText(float64(m.Bounds.Left), float64(m.Bounds.Top), text)
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	if r.iGraphicsMode == GM_COMPATIBLE {
+		// FIXME
+		log.Error("Unsupported iGraphicsMode GM_COMPATIBLE in ExtTextOutW")
+	} else {
+
+		dx := make([]int, len(r.wEmrText.OutputDx))
+		for idx := range r.wEmrText.OutputDx {
+			dx[idx] = int(r.wEmrText.OutputDx[idx])
+		}
+
+		if !w32.ExtTextOutW(ctx.MemDC, int(r.Bounds.Left), int(r.Bounds.Top),
+			uint(r.wEmrText.Options), &r.wEmrText.Rectangle, r.wEmrText.OutputString, uint(r.wEmrText.Chars), dx) {
+			log.Error("failed to run ExtTextOutW")
+		}
+	}
 }
 
 type Polybezier16Record struct {
 	Record
-	Bounds  RectL
+	Bounds  w32.RECT
 	Count   uint32
 	aPoints []PointS
 }
@@ -1050,20 +1022,22 @@ func readPolybezier16Record(reader *bytes.Reader, size uint32) (Recorder, error)
 func (r *Polybezier16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYBEZIER16")
 
-	ctx.MoveTo(float64(r.aPoints[0].X), float64(r.aPoints[0].Y))
-	for i := 1; i < int(r.Count); i = i + 3 {
-		ctx.CubeTo(
-			float64(r.aPoints[i].X), float64(r.aPoints[i].Y),
-			float64(r.aPoints[i+1].X), float64(r.aPoints[i+1].Y),
-			float64(r.aPoints[i+2].X), float64(r.aPoints[i+2].Y),
-		)
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	bezerPoints := make([]w32.POINT, r.Count)
+	for idx := range r.aPoints {
+		bezerPoints[idx] = w32.POINT{X: int32(r.aPoints[idx].X), Y: int32(r.aPoints[idx].Y)}
 	}
-	ctx.Stroke()
+
+	if !w32.PolyBezier(ctx.MemDC, bezerPoints, w32.DWORD(r.Count)) {
+		log.Error("failed to run PolyBezier")
+	}
 }
 
 type Polygon16Record struct {
 	Record
-	Bounds  RectL
+	Bounds  w32.RECT
 	Count   uint32
 	aPoints []PointS
 }
@@ -1091,17 +1065,22 @@ func readPolygon16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *Polygon16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYGON16")
 
-	ctx.MoveTo(float64(r.aPoints[0].X), float64(r.aPoints[0].Y))
-	for i := 1; i < int(r.Count); i++ {
-		ctx.LineTo(float64(r.aPoints[i].X), float64(r.aPoints[i].Y))
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	vertexPoints := make([]w32.POINT, r.Count)
+	for idx := range r.aPoints {
+		vertexPoints[idx] = w32.POINT{X: int32(r.aPoints[idx].X), Y: int32(r.aPoints[idx].Y)}
 	}
-	ctx.Close()
-	ctx.FillStroke()
+
+	if !w32.Polygon(ctx.MemDC, vertexPoints, int(r.Count)) {
+		log.Error("failed to run Polygon")
+	}
 }
 
 type Polyline16Record struct {
 	Record
-	Bounds  RectL
+	Bounds  w32.RECT
 	Count   uint32
 	aPoints []PointS
 }
@@ -1129,16 +1108,22 @@ func readPolyline16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *Polyline16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYLINE16")
 
-	ctx.MoveTo(float64(r.aPoints[0].X), float64(r.aPoints[0].Y))
-	for i := 1; i < int(r.Count); i++ {
-		ctx.LineTo(float64(r.aPoints[i].X), float64(r.aPoints[i].Y))
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	points := make([]w32.POINT, r.Count)
+	for idx := range r.aPoints {
+		points[idx] = w32.POINT{X: int32(r.aPoints[idx].X), Y: int32(r.aPoints[idx].Y)}
 	}
-	// ctx.Stroke()
+
+	if !w32.Polyline(ctx.MemDC, points, int(r.Count)) {
+		log.Error("failed to run Polygon")
+	}
 }
 
 type Polybezierto16Record struct {
 	Record
-	Bounds  RectL
+	Bounds  w32.RECT
 	Count   uint32
 	aPoints []PointS
 }
@@ -1166,20 +1151,22 @@ func readPolybezierto16Record(reader *bytes.Reader, size uint32) (Recorder, erro
 func (r *Polybezierto16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYBEZIERTO16")
 
-	for i := 0; i < int(r.Count); i = i + 3 {
-		ctx.CubeTo(
-			float64(r.aPoints[i].X), float64(r.aPoints[i].Y),
-			float64(r.aPoints[i+1].X), float64(r.aPoints[i+1].Y),
-			float64(r.aPoints[i+2].X), float64(r.aPoints[i+2].Y),
-		)
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	bezerPoints := make([]w32.POINT, r.Count)
+	for idx := range r.aPoints {
+		bezerPoints[idx] = w32.POINT{X: int32(r.aPoints[idx].X), Y: int32(r.aPoints[idx].Y)}
 	}
 
-	ctx.Stroke()
+	if !w32.PolyBezierTo(ctx.MemDC, bezerPoints, w32.DWORD(r.Count)) {
+		log.Error("failed to run PolyBezier")
+	}
 }
 
 type Polylineto16Record struct {
 	Record
-	Bounds  RectL
+	Bounds  w32.RECT
 	Count   uint32
 	aPoints []PointS
 }
@@ -1207,14 +1194,22 @@ func readPolylineto16Record(reader *bytes.Reader, size uint32) (Recorder, error)
 func (r *Polylineto16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYLINETO16")
 
-	for i := 0; i < int(r.Count); i++ {
-		ctx.LineTo(float64(r.aPoints[i].X), float64(r.aPoints[i].Y))
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	points := make([]w32.POINT, r.Count)
+	for idx := range r.aPoints {
+		points[idx] = w32.POINT{X: int32(r.aPoints[idx].X), Y: int32(r.aPoints[idx].Y)}
+	}
+
+	if !w32.PolylineTo(ctx.MemDC, points, w32.DWORD(r.Count)) {
+		log.Error("failed to run Polygon")
 	}
 }
 
 type Polypolygon16Record struct {
 	Record
-	Bounds            RectL
+	Bounds            w32.RECT
 	NumberOfPolygons  uint32
 	Count             uint32
 	PolygonPointCount []uint32
@@ -1253,17 +1248,20 @@ func readPolypolygon16Record(reader *bytes.Reader, size uint32) (Recorder, error
 func (r *Polypolygon16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYPOLYGON16")
 
-	idx := 0
-	for p := 0; p < int(r.NumberOfPolygons); p++ {
-		pCount := int(r.PolygonPointCount[p])
-		ctx.MoveTo(float64(r.aPoints[idx].X), float64(r.aPoints[idx].Y))
-		for i := 1; i < pCount; i++ {
-			ctx.LineTo(float64(r.aPoints[idx+i].X), float64(r.aPoints[idx+i].Y))
-		}
-		idx += pCount
-		ctx.Close()
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MemDC, w32.HGDIOBJ(hrgn))
+
+	points := make([]w32.POINT, r.Count)
+	asz := make([]int, r.Count)
+	for idx := range r.aPoints {
+		points[idx] = w32.POINT{X: int32(r.aPoints[idx].X), Y: int32(r.aPoints[idx].Y)}
+		asz[idx] = int(r.PolygonPointCount[idx])
 	}
-	ctx.FillStroke()
+
+	if !w32.PolyPolygon(ctx.MemDC, points, asz, int(r.Count)) {
+		log.Error("failed to run Polygon")
+	}
+
 }
 
 type ExtcreatepenRecord struct {
@@ -1271,7 +1269,7 @@ type ExtcreatepenRecord struct {
 	ihPen           uint32
 	offBmi, cbBmi   uint32
 	offBits, cbBits uint32
-	elp             LogPenEx
+	elp             w32.LOGPENEX
 	BmiSrc          DibHeaderInfo
 	BitsSrc         []byte
 }
@@ -1336,7 +1334,18 @@ func readExtcreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error)
 func (r *ExtcreatepenRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_EXTCREATEPEN")
 
-	ctx.Objects[r.ihPen] = r.elp
+	logbrush := w32.LOGBRUSH{
+		LbStyle: r.elp.BrushStyle,
+		LbColor: r.elp.ColorRef,
+		LbHatch: uintptr(r.elp.BrushHatch),
+	}
+
+	styleEntry := make([]uint, len(r.elp.StyleEntry))
+	for idx := range r.elp.StyleEntry {
+		styleEntry[idx] = uint(r.elp.StyleEntry[idx])
+	}
+
+	ctx.Objects[r.ihPen] = w32.ExtCreatePen(uint(r.elp.PenStyle), uint(r.elp.Width), &logbrush, uint(r.elp.NumStyleEntries), styleEntry)
 }
 
 type SeticmmodeRecord struct {
