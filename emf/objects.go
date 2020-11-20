@@ -118,3 +118,69 @@ type RegionData struct {
 	RegionDataHeader
 	Data []w32.RECT
 }
+
+type WMFCOLORREF struct {
+	Red      byte
+	Green    byte
+	Blue     byte
+	Reseverd byte
+}
+
+func (m WMFCOLORREF) ColorRef() w32.COLORREF {
+
+	red := uint32(m.Red)
+	green := uint32(m.Green) << 4
+	blue := uint32(m.Blue) << 8
+
+	return w32.COLORREF(red | green | blue)
+}
+
+type WMFLOGBRUSH struct {
+	BrushStyle uint32
+	Color      WMFCOLORREF
+	BrushHatch uint32
+}
+
+func (m WMFLOGBRUSH) LogBrush() w32.LOGBRUSH {
+	return w32.LOGBRUSH{
+		BrushStyle: m.BrushStyle,
+		Color:      m.Color.ColorRef(),
+		BrushHatch: m.BrushHatch,
+	}
+}
+
+type WMFLOGPEN struct {
+	PenStyle uint32
+	Width    w32.POINT
+	ColorRef WMFCOLORREF
+}
+
+func (m WMFLOGPEN) LogPen() w32.LOGPEN {
+	return w32.LOGPEN{
+		BrushStyle: m.BrushStyle,
+		Width:      m.Width,
+		ColorRef:   m.ColorRef.ColorRef(),
+	}
+}
+
+type WMFLOGPENEX struct {
+	PenStyle        uint32
+	Width           uint32
+	BrushStyle      uint32
+	ColorRef        WMFCOLORREF
+	BrushHatch      uint32
+	NumStyleEntries uint32
+	StyleEntry      []uint32
+}
+
+func (m WMFLOGPENEX) LogPenEx() w32.LOGPENEX {
+	return w32.LOGPENEX{
+		PenStyle: m.PenStyle,
+		Width: m.Width,
+		BrushStyle: m.BrushStyle
+		ColorRef: m.ColorRef.ColorRef(),
+		BrushHatch: m.BrushHatch,
+		NumStyleEntries: m.NumStyleEntries,
+		StyleEntry: m.StyleEntry
+	}
+}

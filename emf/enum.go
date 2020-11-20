@@ -201,12 +201,6 @@ const (
 	WINDING   = 0x02
 )
 
-// GraphicsMode
-const (
-	GM_COMPATIBLE = 0x00000001
-	GM_ADVANCED   = 0x00000002
-)
-
 // ExtTextOutOptions
 const (
 	ETO_OPAQUE            = 0x00000002

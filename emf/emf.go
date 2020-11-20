@@ -10,15 +10,15 @@ import (
 )
 
 var stockObjectData = map[uint32]interface{}{
-	WHITE_BRUSH:         w32.LOGBRUSH{LbStyle: BS_SOLID, LbColor: 0x00FFFFFF},
-	LTGRAY_BRUSH:        w32.LOGBRUSH{LbStyle: BS_SOLID, LbColor: 0x00C0C0C0},
-	GRAY_BRUSH:          w32.LOGBRUSH{LbStyle: BS_SOLID, LbColor: 0x00808080},
-	DKGRAY_BRUSH:        w32.LOGBRUSH{LbStyle: BS_SOLID, LbColor: 0x00404040},
-	BLACK_BRUSH:         w32.LOGBRUSH{LbStyle: BS_SOLID, LbColor: 0x00000000},
-	NULL_BRUSH:          w32.LOGBRUSH{LbStyle: BS_NULL},
-	WHITE_PEN:           w32.LOGPEN{LopnStyle: PS_COSMETIC | PS_SOLID, LopnColor: 0x00FFFFFF, LopnWidth: w32.POINT{X: 1, Y: 0}},
-	BLACK_PEN:           w32.LOGPEN{LopnStyle: PS_COSMETIC | PS_SOLID, LopnColor: 0x00000000, LopnWidth: w32.POINT{X: 1, Y: 0}},
-	NULL_PEN:            w32.LOGPEN{LopnStyle: PS_NULL},
+	WHITE_BRUSH:         w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00FFFFFF},
+	LTGRAY_BRUSH:        w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00C0C0C0},
+	GRAY_BRUSH:          w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00808080},
+	DKGRAY_BRUSH:        w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00404040},
+	BLACK_BRUSH:         w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00000000},
+	NULL_BRUSH:          w32.LOGBRUSH{BrushStyle: BS_NULL},
+	WHITE_PEN:           w32.LOGPEN{PenStyle: PS_COSMETIC | PS_SOLID, ColorRef: 0x00FFFFFF, Width: w32.POINT{X: 1, Y: 0}},
+	BLACK_PEN:           w32.LOGPEN{PenStyle: PS_COSMETIC | PS_SOLID, ColorRef: 0x00000000, Width: w32.POINT{X: 1, Y: 0}},
+	NULL_PEN:            w32.LOGPEN{PenStyle: PS_NULL},
 	OEM_FIXED_FONT:      w32.LOGFONT{CharSet: OEM_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + FIXED_PITCH)},
 	ANSI_FIXED_FONT:     w32.LOGFONT{CharSet: ANSI_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + FIXED_PITCH)},
 	ANSI_VAR_FONT:       w32.LOGFONT{CharSet: ANSI_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + VARIABLE_PITCH)},
@@ -79,12 +79,8 @@ func NewEmfContext(width, height int) *EmfContext {
 		Height:  height,
 	}
 
-	whiteBrush := StockObjects[WHITE_BRUSH].(w32.HBRUSH)
-
 	w32.SetTextAlign(e.MDC, TA_LEFT|TA_TOP)
-	w32.SelectObject(e.MDC, w32.HGDIOBJ(whiteBrush))
-	w32.Rectangle(e.MDC, 0, 0, width, height)
-
+	w32.Rectangle(e.MDC, 0, 0, width, height) // too fill white background
 	return e
 }
 

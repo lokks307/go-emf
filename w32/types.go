@@ -306,16 +306,17 @@ type EXCEPINFO struct {
 }
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd145035.aspx
+
 type LOGBRUSH struct {
-	LbStyle uint32
-	LbColor COLORREF
-	LbHatch uintptr
+	BrushStyle uint32
+	Color      COLORREF
+	BrushHatch uint32
 }
 
 type LOGPEN struct {
-	LopnStyle uint32
-	LopnWidth POINT
-	LopnColor COLORREF
+	PenStyle uint32
+	Width    POINT
+	ColorRef COLORREF
 }
 type LOGPENEX struct {
 	PenStyle        uint32

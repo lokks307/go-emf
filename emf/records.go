@@ -367,7 +367,7 @@ func (r *SetstretchbltmodeRecord) Draw(ctx *EmfContext) {
 
 type SettextcolorRecord struct {
 	Record
-	Color w32.COLORREF
+	Color WMFCOLORREF
 }
 
 func readSettextcolorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -382,16 +382,16 @@ func readSettextcolorRecord(reader *bytes.Reader, size uint32) (Recorder, error)
 }
 
 func (r *SettextcolorRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_SETTEXTCOLOR")
+	log.Tracef("Draw EMR_SETTEXTCOLOR 0x%02x", r.Color.ColorRef())
 
-	if w32.SetTextColor(ctx.MDC, r.Color) == w32.COLORREF(w32.CLR_INVALID) {
+	if w32.SetTextColor(ctx.MDC, r.Color.ColorRef()) == w32.COLORREF(w32.CLR_INVALID) {
 		log.Error("failed to run SetTextColor")
 	}
 }
 
 type SetbkcolorRecord struct {
 	Record
-	Color w32.COLORREF
+	Color WMFCOLORREF
 }
 
 func readSetbkcolorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -408,7 +408,7 @@ func readSetbkcolorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *SetbkcolorRecord) Draw(ctx *EmfContext) {
 	log.Tracef("Draw EMR_SETBKCOLOR")
 
-	if w32.SetBkColor(ctx.MDC, r.Color) == w32.COLORREF(w32.CLR_INVALID) {
+	if w32.SetBkColor(ctx.MDC, r.Color.ColorRef()) == w32.COLORREF(w32.CLR_INVALID) {
 		log.Error("failed to run SetBkColor")
 	}
 }
@@ -714,6 +714,8 @@ func readModifyworldtransformRecord(reader *bytes.Reader, size uint32) (Recorder
 func (r *ModifyworldtransformRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_MODIFYWORLDTRANSFORM")
 
+	w32.SetGraphicsMode(ctx.MDC, w32.GM_ADVANCED)
+
 	if !w32.ModifyWorldTransform(ctx.MDC, &r.XForm, w32.DWORD(r.ModifyWorldTransformMode)) {
 		log.Error("failed to run ModifyWorldTransform")
 	}
@@ -764,7 +766,7 @@ func (r *SelectobjectRecord) Draw(ctx *EmfContext) {
 type CreatepenRecord struct {
 	Record
 	ihPen  uint32
-	LogPen w32.LOGPEN
+	LogPen WMFLOGPEN
 }
 
 func readCreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -785,13 +787,13 @@ func readCreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *CreatepenRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_CREATEPEN")
 
-	ctx.Objects[r.ihPen] = w32.CreatePenIndirect(&r.LogPen)
+	ctx.Objects[r.ihPen] = w32.CreatePenIndirect(&r.LogPen.LogPen())
 }
 
 type CreatebrushindirectRecord struct {
 	Record
 	ihBrush  uint32
-	LogBrush w32.LOGBRUSH
+	LogBrush WMFLOGBRUSH
 }
 
 func readCreatebrushindirectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -812,7 +814,7 @@ func readCreatebrushindirectRecord(reader *bytes.Reader, size uint32) (Recorder,
 func (r *CreatebrushindirectRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_CREATEBRUSHINDIRECT")
 
-	ctx.Objects[r.ihBrush] = w32.CreateBrushIndirect(&r.LogBrush)
+	ctx.Objects[r.ihBrush] = w32.CreateBrushIndirect(&r.LogBrush.LogBrush())
 }
 
 type DeleteobjectRecord struct {
@@ -1140,7 +1142,9 @@ func readExttextoutwRecord(reader *bytes.Reader, size uint32) (Recorder, error) 
 }
 
 func (r *ExttextoutwRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_EXTTEXTOUTW")
+	log.Trace("Draw EMR_EXTTEXTOUTW (", r.wEmrText.OutputString, ")")
+
+	w32.SetGraphicsMode(ctx.MDC, int(r.iGraphicsMode))
 
 	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
 	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
@@ -1154,24 +1158,6 @@ func (r *ExttextoutwRecord) Draw(ctx *EmfContext) {
 		w32.UINT(r.wEmrText.Options), &r.wEmrText.Rectangle, r.wEmrText.OutputString, w32.UINT(r.wEmrText.Chars), dx) {
 		log.Error("failed to run ExtTextOutW")
 	}
-	/*
-		if r.iGraphicsMode == GM_COMPATIBLE {
-			if !w32.TextOutW(ctx.MDC, int(r.Bounds.Left), int(r.Bounds.Top), r.wEmrText.OutputString) {
-				log.Error("failed to run TextOutW")
-			}
-		} else {
-
-			dx := make([]w32.INT, len(r.wEmrText.OutputDx))
-			for idx := range r.wEmrText.OutputDx {
-				dx[idx] = w32.INT(r.wEmrText.OutputDx[idx])
-			}
-
-			if !w32.ExtTextOutW(ctx.MDC, int(r.Bounds.Left), int(r.Bounds.Top),
-				w32.UINT(r.wEmrText.Options), &r.wEmrText.Rectangle, r.wEmrText.OutputString, w32.UINT(r.wEmrText.Chars), dx) {
-				log.Error("failed to run ExtTextOutW")
-			}
-		}
-	*/
 }
 
 type Polybezier16Record struct {
@@ -1517,17 +1503,17 @@ func (r *ExtcreatepenRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_EXTCREATEPEN")
 
 	logbrush := w32.LOGBRUSH{
-		LbStyle: r.elp.BrushStyle,
-		LbColor: r.elp.ColorRef,
-		LbHatch: uintptr(r.elp.BrushHatch),
+		BrushStyle: r.elp.BrushStyle,
+		Color:      r.elp.ColorRef,
+		BrushHatch: r.elp.BrushHatch,
 	}
 
-	styleEntry := make([]uint, len(r.elp.StyleEntry))
+	styleEntry := make([]w32.DWORD, len(r.elp.StyleEntry))
 	for idx := range r.elp.StyleEntry {
-		styleEntry[idx] = uint(r.elp.StyleEntry[idx])
+		styleEntry[idx] = w32.DWORD(r.elp.StyleEntry[idx])
 	}
 
-	ctx.Objects[r.ihPen] = w32.ExtCreatePen(uint(r.elp.PenStyle), uint(r.elp.Width), &logbrush, uint(r.elp.NumStyleEntries), styleEntry)
+	ctx.Objects[r.ihPen] = w32.ExtCreatePen(w32.DWORD(r.elp.PenStyle), w32.DWORD(r.elp.Width), &logbrush, w32.DWORD(r.elp.NumStyleEntries), styleEntry)
 }
 
 type SeticmmodeRecord struct {
@@ -1573,7 +1559,7 @@ func (r *SetbrushorgexRecord) Draw(ctx *EmfContext) {
 type SetpixelvRecord struct {
 	Record
 	Pixel w32.POINT
-	Color w32.COLORREF
+	Color WMFCOLORREF
 }
 
 func readSetpixelvRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -1594,7 +1580,7 @@ func readSetpixelvRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *SetpixelvRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_SETPIXELV")
 
-	if !w32.SetPixelV(ctx.MDC, int(r.Pixel.X), int(r.Pixel.Y), r.Color) {
+	if !w32.SetPixelV(ctx.MDC, int(r.Pixel.X), int(r.Pixel.Y), r.Color.ColorRef()) {
 		log.Error("failed to run SetPixelV")
 	}
 }

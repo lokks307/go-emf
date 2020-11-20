@@ -112,6 +112,7 @@ var (
 	setTextJustification      = gdi32.NewProc("SetTextJustification")
 	fillRgn                   = gdi32.NewProc("FillRgn")
 	createRectRgnIndirect     = gdi32.NewProc("CreateRectRgnIndirect")
+	setGraphicsMode           = gdi32.NewProc("SetGraphicsMode")
 )
 
 func GetDeviceCaps(hdc HDC, index int) int {
@@ -303,7 +304,12 @@ func EndPage(hdc HDC) int {
 	return int(ret)
 }
 
-func ExtCreatePen(dwPenStyle, dwWidth uint, lplb *LOGBRUSH, dwStyleCount uint, lpStyle []uint) HPEN {
+func ExtCreatePen(dwPenStyle, dwWidth DWORD, lplb *LOGBRUSH, dwStyleCount DWORD, lpStyle []DWORD) HPEN {
+
+	if len(lpStyle) == 0 {
+		lpStyle = append(lpStyle, DWORD(0))
+	}
+
 	ret, _, _ := extCreatePen.Call(
 		uintptr(dwPenStyle),
 		uintptr(dwWidth),
@@ -1089,4 +1095,12 @@ func CreateRectRgnIndirect(lprect *RECT) HRGN {
 		uintptr(unsafe.Pointer(lprect)),
 	)
 	return HRGN(ret)
+}
+
+func SetGraphicsMode(hdc HDC, iMode int) int {
+	ret, _, _ := setGraphicsMode.Call(
+		uintptr(hdc),
+		uintptr(iMode),
+	)
+	return int(ret)
 }

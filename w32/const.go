@@ -2488,6 +2488,12 @@ const (
 	GPTR                = (GMEM_FIXED | GMEM_ZEROINIT)
 )
 
+// GraphicsMode
+const (
+	GM_COMPATIBLE = 0x00000001
+	GM_ADVANCED   = 0x00000002
+)
+
 // Ternary raster operations
 const (
 	SRCCOPY        = 0x00CC0020
