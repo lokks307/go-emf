@@ -2,13 +2,11 @@ package emf
 
 import (
 	"bytes"
-	"fmt"
 	"image"
-	"image/draw"
+	"image/png"
+	"os"
 
-	"github.com/llgcode/draw2d"
-	"github.com/llgcode/draw2d/draw2dimg"
-	"github.com/lokks307/emftoimg/fontname"
+	log "github.com/sirupsen/logrus"
 )
 
 type EmfFile struct {
@@ -17,102 +15,64 @@ type EmfFile struct {
 	Eof     *EofRecord
 }
 
-func ReadFile(data []byte) (*EmfFile, error) {
+func ReadFile(data []byte) *EmfFile {
 	reader := bytes.NewReader(data)
-	file := &EmfFile{}
+	emfFile := &EmfFile{}
 
 	for reader.Len() > 0 {
 		rec, err := readRecord(reader)
-
 		if err != nil {
-			return nil, err
+			log.Error(err)
+			break
 		}
 
 		switch rec := rec.(type) {
 		case *HeaderRecord:
-			file.Header = rec
+			emfFile.Header = rec
 		case *EofRecord:
-			file.Eof = rec
+			emfFile.Eof = rec
 		default:
-			file.Records = append(file.Records, rec)
+			emfFile.Records = append(emfFile.Records, rec)
 		}
 	}
 
-	return file, nil
+	return emfFile
 }
 
-type context struct {
-	draw2dimg.GraphicContext
-	img     draw.Image
-	objects map[uint32]interface{}
-
-	w, h int
-
-	wo, vo *PointL
-	we, ve *SizeL
-	mm     uint32
-}
-
-func (f *EmfFile) initContext(w, h int) *context {
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	gc := draw2dimg.NewGraphicContext(img)
-
-	draw2d.SetFontFolder("C:\\Windows\\Fonts")
-	draw2d.SetFontNamer(func(f draw2d.FontData) string {
-		fmt.Println("font in=", f.Name)
-		res, err := fontname.Find(f.Name)
-		fmt.Println("font out=", res)
-		if err != nil || res == "." {
-			return "malgun.ttf"
-		}
-		return res
-	})
-
-	return &context{
-		GraphicContext: *gc,
-		img:            img,
-		w:              w,
-		h:              h,
-		mm:             MM_TEXT,
-		objects:        make(map[uint32]interface{}),
-	}
-}
-
-func (ctx context) applyTransformation() {
-	if ctx.we == nil || ctx.ve == nil {
-		return
-	}
-
-	switch ctx.mm {
-	case MM_ISOTROPIC, MM_ANISOTROPIC:
-		sx := float64(ctx.ve.Cx) / float64(ctx.we.Cx)
-		sy := float64(ctx.ve.Cy) / float64(ctx.we.Cy)
-		ctx.Scale(sx, sy)
-	default:
-		sx := float64(ctx.w) / float64(ctx.we.Cx)
-		sy := float64(ctx.h) / float64(ctx.we.Cy)
-		ctx.Scale(sx, sy)
-
-	}
-}
-
-func (f *EmfFile) Draw() image.Image {
+func (f *EmfFile) DrawToPNG(output string) error {
 
 	bounds := f.Header.Original.Bounds
-
-	// inclusive-inclusive bounds
 	width := int(bounds.Width()) + 1
 	height := int(bounds.Height()) + 1
 
-	ctx := f.initContext(width, height)
+	emfdc := NewEmfContext(width, height)
 
-	if bounds.Left != 0 || bounds.Top != 0 {
-		ctx.Translate(-float64(bounds.Left), -float64(bounds.Top))
+	for idx := range f.Records {
+		f.Records[idx].Draw(emfdc)
 	}
 
-	for _, rec := range f.Records {
-		rec.Draw(ctx)
+	var img *image.RGBA
+	var err error
+	var outf *os.File
+
+	img, err = emfdc.DrawToImage()
+	if err != nil {
+		log.Error(err)
+		return err
 	}
 
-	return ctx.img
+	outf, err = os.Create(output)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer outf.Close()
+
+	err = png.Encode(outf, img)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	return nil
 }

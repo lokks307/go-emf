@@ -3,36 +3,18 @@ package emf
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"image/color"
 	"os"
 	"unicode/utf16"
 
-	"github.com/llgcode/draw2d"
+	"github.com/lokks307/go-emf/w32"
 )
 
 type LogPaletteEntry struct {
 	_, Blue, Green, Red uint8
 }
 
-type LogPen struct {
-	PenStyle uint32
-	Width    PointL
-	ColorRef ColorRef
-}
-
-type LogPenEx struct {
-	PenStyle        uint32
-	Width           uint32
-	BrushStyle      uint32
-	ColorRef        ColorRef
-	BrushHatch      uint32
-	NumStyleEntries uint32
-	StyleEntry      []uint32
-}
-
-func readLogPenEx(reader *bytes.Reader) (LogPenEx, error) {
-	r := LogPenEx{}
+func readLogPenEx(reader *bytes.Reader) (w32.LOGPENEX, error) {
+	r := w32.LOGPENEX{}
 	if err := binary.Read(reader, binary.LittleEndian, &r.PenStyle); err != nil {
 		return r, err
 	}
@@ -62,25 +44,15 @@ func readLogPenEx(reader *bytes.Reader) (LogPenEx, error) {
 	return r, nil
 }
 
-type LogBrushEx struct {
-	BrushStyle uint32
-	Color      ColorRef
-	BrushHatch uint32
-}
-
-type XForm struct {
-	M11, M12, M21, M22, Dx, Dy float32
-}
-
 type EmrText struct {
-	Reference    PointL
+	Reference    w32.POINT
 	Chars        uint32
 	offString    uint32
 	Options      uint32
-	Rectangle    RectL
+	Rectangle    w32.RECT
 	offDx        uint32
 	OutputString string
-	OutputDx     []uint32
+	OutputDx     []int32
 }
 
 func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
@@ -114,7 +86,7 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 
 	// UndefinedSpace2
 	reader.Seek(int64(int(r.offDx)-(offset-reader.Len())), os.SEEK_CUR)
-	r.OutputDx = make([]uint32, r.Chars)
+	r.OutputDx = make([]int32, r.Chars)
 	if err := binary.Read(reader, binary.LittleEndian, &r.OutputDx); err != nil {
 		return r, err
 	}
@@ -122,149 +94,27 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 	return r, nil
 }
 
-type LogFont struct {
-	Height, Width                        int32
-	Escapement, Orientation, Weight      uint32
-	Italic, Underline, StrikeOut         uint8
-	CharSet, OutPrecision, ClipPrecision uint8
-	Quality                              uint8
-	PitchAndFamily                       uint8
-	Facename                             string
-}
-
-func readLogFont(reader *bytes.Reader) (LogFont, error) {
-	r := LogFont{}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Height); err != nil {
+func readLogFont(reader *bytes.Reader) (w32.LOGFONT, error) {
+	r := w32.LOGFONT{}
+	if err := binary.Read(reader, binary.LittleEndian, &r); err != nil {
 		return r, err
 	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Width); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Escapement); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Orientation); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Weight); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Italic); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Underline); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.StrikeOut); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.CharSet); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.OutPrecision); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.ClipPrecision); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.Quality); err != nil {
-		return r, err
-	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.PitchAndFamily); err != nil {
-		return r, err
-	}
-
-	b := make([]uint16, 32)
-	if err := binary.Read(reader, binary.LittleEndian, &b); err != nil {
-		return r, err
-	}
-
-	// raw, _, _ := transform.Bytes(unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder(), b)
-
-	bTrim := make([]uint16, 0)
-	for i := range b {
-		if b[i] == 0x0000 {
-			break
-		}
-		bTrim = append(bTrim, b[i])
-	}
-
-	for i := range bTrim {
-		fmt.Printf("%04x ", bTrim[i])
-	}
-	fmt.Println()
-
-	r.Facename = string(utf16.Decode(bTrim))
-
-	fmt.Printf("font name raw=%s\n", r.Facename)
-
 	return r, nil
-}
-
-func (m LogFont) GetFontData() draw2d.FontData {
-	fontData := draw2d.FontData{Name: m.Facename, Family: draw2d.FontFamilySans}
-	family := (m.PitchAndFamily & 0xF0) >> 4
-	if family == 0x01 || family == 0x04 || family == 0x05 { // FF_ROMAN, FF_SCRIPT, FF_DECORATIVE
-		fontData.Family = draw2d.FontFamilySerif
-	} else if family == 0x03 { // FF_MODERN
-		fontData.Family = draw2d.FontFamilyMono
-	}
-
-	if m.Weight >= 700 {
-		fontData.Style = fontData.Style | draw2d.FontStyleBold
-	}
-
-	if m.Italic == 0x01 {
-		fontData.Style = fontData.Style | draw2d.FontStyleItalic
-	}
-
-	return fontData
-}
-
-// MS-WMF types
-type ColorRef struct {
-	Red, Green, Blue, _ uint8
-}
-
-func (c ColorRef) GetColor() color.RGBA {
-	return color.RGBA{c.Red, c.Green, c.Blue, 0xff}
-}
-
-type SizeL struct {
-	// MS-WMF says it's 32-bit unsigned integer
-	// but there are files with negative values here
-	Cx, Cy int32
 }
 
 type PointS struct {
 	X, Y int16
 }
 
-type PointL struct {
-	X, Y int32
+type RegionDataHeader struct {
+	Size       uint32
+	Type       uint32
+	CountRects uint32
+	RgnSize    uint32
+	Bounds     w32.RECT
 }
 
-type RectL struct {
-	Left, Top, Right, Bottom int32
+type RegionData struct {
+	RegionDataHeader
+	Data []w32.RECT
 }
-
-func (r RectL) Width() int32  { return r.Right - r.Left }
-func (r RectL) Height() int32 { return r.Bottom - r.Top }
-
-func (r RectL) Center() PointL {
-	return PointL{
-		X: r.Left + r.Width()/2,
-		Y: r.Top + r.Height()/2,
-	}
-}
-
-type BitmapInfoHeader struct {
-	HeaderSize                   uint32
-	Width, Height                int32
-	Planes, BitCount             uint16
-	Compression, ImageSize       uint32
-	XPelsPerMeter, YPelsPerMeter int32
-	ColorUsed, ColorImportant    uint32
-}
-
-type DibHeaderInfo struct{}

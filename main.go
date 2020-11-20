@@ -2,80 +2,79 @@ package main
 
 import (
 	"flag"
-	"io"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
-	"time"
+	"path/filepath"
 
-	"github.com/llgcode/draw2d/draw2dimg"
-	"github.com/lokks307/emftoimg/emf"
+	"github.com/lokks307/go-emf/emf"
+	"github.com/mattn/go-colorable"
+	log "github.com/sirupsen/logrus"
 )
 
-const VERSION = "0.1.0"
-
-var errlog = log.New(os.Stderr, "emf: ", 0)
-
-var (
-	flagVersion = flag.Bool("version", false, "")
-)
-
-var usage = `EMF images converter
-
-Usage: emftoimg [inputfile]
-   	--version  print the version number
-
-`
+const VERSION = "0.0.1"
 
 func main() {
 
+	// Flag
+
+	logDebugFlag := flag.Bool("debug", false, "print out debug message")
+	inFile := flag.String("in", "", "emf file to convert")
+	outFile := flag.String("out", "./out.pdf", "png file to output")
+
+	flag.Parse()
+
+	// Logger
+
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: "15:04:05.000",
+		FullTimestamp:   true,
+		ForceColors:     true,
+	})
+
+	if *logDebugFlag {
+		log.SetLevel(log.TraceLevel)
+	}
+
+	log.SetOutput(colorable.NewColorableStdout())
+
+	// file
+
+	if *inFile == "" {
+		fmt.Println("")
+		fmt.Println("GO-EMF: EMF images converter (ver. ", VERSION, ")")
+		fmt.Println("")
+		fmt.Println("Usage: ./go-emf [options]")
+		flag.PrintDefaults()
+		fmt.Println("")
+		os.Exit(0)
+		return
+	}
+
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		os.Exit(0)
+		return
+	}
+
+	inFilePath := filepath.Join(cwd, *inFile)
+
 	var fdata []byte
-	var err error
 
-	fdata, err = ioutil.ReadFile("convert.emf")
-
-	t1 := time.Now()
-	file, err := emf.ReadFile(fdata)
+	fdata, err = ioutil.ReadFile(inFilePath)
 	if err != nil {
-		errlog.Fatal(err)
+		log.Errorf("no such file %s", inFilePath)
+		os.Exit(0)
+		return
 	}
-	e1 := time.Since(t1)
 
-	t2 := time.Now()
-	img := file.Draw()
-	e2 := time.Since(t2)
+	log.Info("EMF file reading...")
+	emfFile := emf.ReadFile(fdata)
+	log.Info("EMF file reading... done")
 
-	var f io.Writer
+	log.Info("Converting EMF file to PNG...")
+	emfFile.DrawToPNG(*outFile)
+	log.Info("Converting EMF file to PNG... done")
 
-	f, err = os.Create("out" + ".png")
-	if err != nil {
-		errlog.Fatal(err)
-	}
-	defer f.(*os.File).Close()
-
-	draw2dimg.SaveToPngFile("out.png", img)
-
-	// err = png.Encode(f, img)
-	// if err != nil {
-	// 	errlog.Fatal(err)
-	// }
-
-	errlog.Printf("file %d bytes reading %.3f ms conversion %.3f ms\n",
-		len(fdata),
-		float64(e1.Nanoseconds())/1000000,
-		float64(e2.Nanoseconds())/1000000)
-
-}
-
-func isatty(fd uintptr) bool {
-	return true
-	// var termios syscall.Termios
-
-	// _, _, err := syscall.Syscall6(syscall.SYS_IOCTL, fd,
-	// 	uintptr(TCGETS),
-	// 	uintptr(unsafe.Pointer(&termios)),
-	// 	0,
-	// 	0,
-	// 	0)
-	// return err == 0
 }
