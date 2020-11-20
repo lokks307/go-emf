@@ -55,6 +55,8 @@ type (
 	ULONG_PTR       uintptr
 	WPARAM          uintptr
 	HRAWINPUT       HANDLE
+	INT             int32
+	UINT            uint32
 )
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd162805.aspx
@@ -1259,4 +1261,18 @@ type SYSTEM_INFO struct {
 	AllocationGranularity     uint32
 	ProcessorLevel            uint16
 	ProcessorRevision         uint16
+}
+
+type XFORM struct {
+	M11, M12, M21, M22, Dx, Dy float32
+}
+
+type pIStreamVtbl struct {
+	qeryInterface uintptr
+	addRef        uintptr
+	release       uintptr
+}
+
+type IStream struct {
+	lpVtbl *pIStreamVtbl
 }

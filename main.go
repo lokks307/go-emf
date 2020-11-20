@@ -73,8 +73,8 @@ func main() {
 	emfFile := emf.ReadFile(fdata)
 	log.Info("EMF file reading... done")
 
-	log.Info("Converting EMF file to PDF...")
-	emfFile.DrawToPDF(*outFile)
-	log.Info("Converting EMF file to PDF... done")
+	log.Info("Converting EMF file to PNG...")
+	emfFile.DrawToPNG(*outFile)
+	log.Info("Converting EMF file to PNG... done")
 
 }

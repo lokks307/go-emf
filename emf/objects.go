@@ -44,10 +44,6 @@ func readLogPenEx(reader *bytes.Reader) (w32.LOGPENEX, error) {
 	return r, nil
 }
 
-type XForm struct {
-	M11, M12, M21, M22, Dx, Dy float32
-}
-
 type EmrText struct {
 	Reference    w32.POINT
 	Chars        uint32
@@ -106,25 +102,19 @@ func readLogFont(reader *bytes.Reader) (w32.LOGFONT, error) {
 	return r, nil
 }
 
-// MS-WMF types
-type ColorRef uint32
-
-type SizeL struct {
-	// MS-WMF says it's 32-bit unsigned integer
-	// but there are files with negative values here
-	Cx, Cy int32
-}
-
 type PointS struct {
 	X, Y int16
 }
-type BitmapInfoHeader struct {
-	HeaderSize                   uint32
-	Width, Height                int32
-	Planes, BitCount             uint16
-	Compression, ImageSize       uint32
-	XPelsPerMeter, YPelsPerMeter int32
-	ColorUsed, ColorImportant    uint32
+
+type RegionDataHeader struct {
+	Size       uint32
+	Type       uint32
+	CountRects uint32
+	RgnSize    uint32
+	Bounds     w32.RECT
 }
 
-type DibHeaderInfo struct{}
+type RegionData struct {
+	RegionDataHeader
+	Data []w32.RECT
+}

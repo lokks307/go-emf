@@ -3,33 +3,32 @@ package emf
 import (
 	"bytes"
 	"encoding/binary"
-	"image"
 	"os"
 
 	"github.com/lokks307/go-emf/w32"
 	log "github.com/sirupsen/logrus"
 )
 
-type bitmapRecord struct {
+type CommonBitmapRecord struct {
 	Record
 	Bounds                       w32.RECT
 	xDest, yDest, cxDest, cyDest int32
 	BitBltRasterOperation        uint32
 	xSrc, ySrc                   int32
-	XformSrc                     XForm
-	BkColorSrc                   ColorRef
+	XformSrc                     w32.XFORM
+	BkColorSrc                   w32.COLORREF
 	UsageSrc                     uint32
 	offBmiSrc, cbBmiSrc          uint32
 	offBitsSrc, cbBitsSrc        uint32
 	// only for EMR_STRETCHBLT
 	cxSrc, cySrc int32
 
-	BmiSrc  BitmapInfoHeader
+	BmiSrc  w32.BITMAPINFOHEADER
 	BitsSrc []byte
 }
 
 // unified reader function for EMR_BITBLT and EMR_STRETCHBLT
-func (r *bitmapRecord) read(reader *bytes.Reader) (Recorder, error) {
+func (r *CommonBitmapRecord) read(reader *bytes.Reader) (Recorder, error) {
 	if err := binary.Read(reader, binary.LittleEndian, &r.Bounds); err != nil {
 		return nil, err
 	}
@@ -121,7 +120,7 @@ func (r *bitmapRecord) read(reader *bytes.Reader) (Recorder, error) {
 	}
 
 	// skipping UndefinedSpace2
-	reader.Seek(int64(r.offBitsSrc-rsize-r.BmiSrc.HeaderSize), os.SEEK_CUR)
+	reader.Seek(int64(r.offBitsSrc-rsize-r.BmiSrc.BiSize), os.SEEK_CUR)
 	r.BitsSrc = make([]byte, r.cbBitsSrc)
 	if _, err := reader.Read(r.BitsSrc); err != nil {
 		return nil, err
@@ -130,121 +129,8 @@ func (r *bitmapRecord) read(reader *bytes.Reader) (Recorder, error) {
 	return r, nil
 }
 
-func (r *bitmapRecord) readImage() image.Image {
-
-	// bytes per pixel
-	bpp, ok := map[uint16]int{
-		BI_BITCOUNT_1: 0,
-		BI_BITCOUNT_3: 1,
-		BI_BITCOUNT_5: 3,
-		BI_BITCOUNT_4: 2,
-		BI_BITCOUNT_6: 4,
-	}[r.BmiSrc.BitCount]
-
-	if !ok {
-
-		log.Error("Unsupported bitmap type ", r.BmiSrc.BitCount)
-		return nil
-	}
-
-	// src image width and height
-	width, height := int(r.BmiSrc.Width), int(r.BmiSrc.Height)
-	// bytes per line with padding to 4 bytes
-	bpl := ((width*int(r.BmiSrc.BitCount) + 31) & 0xFFFFFFE0) / 8
-
-	switch r.BmiSrc.BitCount {
-	case BI_BITCOUNT_1:
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
-		// we don't read it
-		colors := map[int][]byte{0: []byte{0, 0, 0, 0}, 1: []byte{255, 255, 255, 0}}
-
-		mask := []byte{0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01}
-
-		for y := 0; y < height; y++ {
-			for x := 0; x < width; x++ {
-				p := img.PixOffset(x, height-y-1)
-				c := colors[0]
-				if (r.BitsSrc[y*bpl+x/8] & mask[x%8]) > 0 {
-					c = colors[1]
-				}
-				img.Pix[p+0] = c[2]
-				img.Pix[p+1] = c[1]
-				img.Pix[p+2] = c[0]
-				img.Pix[p+3] = 0xff
-			}
-		}
-		return img
-
-	case BI_BITCOUNT_3:
-		img := image.NewGray(image.Rect(0, 0, width, height))
-		ix := 0
-		// BMP images are stored bottom-up
-		for y := height - 1; y >= 0; y-- {
-			b := r.BitsSrc[y*bpl : y*bpl+bpl]
-			p := img.Pix[ix*img.Stride : ix*img.Stride+img.Stride]
-			for i, j := 0, 0; i < len(p); i, j = i+1, j+bpp {
-				p[i] = b[j]
-			}
-			ix = ix + 1
-		}
-		return img
-
-	case BI_BITCOUNT_4:
-		if r.BmiSrc.Compression != BI_RGB {
-			log.Error("Unsupported compression type ", r.BmiSrc.Compression)
-			return nil
-		}
-
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
-		ix := 0
-		// BMP images are stored bottom-up
-		for y := height - 1; y >= 0; y-- {
-			b := r.BitsSrc[y*bpl : y*bpl+bpl]
-			p := img.Pix[ix*img.Stride : ix*img.Stride+img.Stride]
-			for i, j := 0, 0; i < len(p); i, j = i+4, j+bpp {
-				// The relative intensities of red, green, and blue
-				// are represented with 5 bits for each color component.
-				c := uint16(b[j+1])<<8 | uint16(b[j])
-				p[i+0] = uint8((c>>10)&0x001f) * 8
-				p[i+1] = uint8((c>>5)&0x001f) * 8
-				p[i+2] = uint8(c&0x001f) * 8
-				p[i+3] = 0xff
-			}
-			ix = ix + 1
-		}
-		return img
-
-	case BI_BITCOUNT_5, BI_BITCOUNT_6:
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
-		ix := 0
-		// BMP images are stored bottom-up
-		for y := height - 1; y >= 0; y-- {
-			b := r.BitsSrc[y*bpl : y*bpl+bpl]
-			p := img.Pix[ix*img.Stride : ix*img.Stride+img.Stride]
-			for i, j := 0, 0; i < len(p); i, j = i+4, j+bpp {
-				// color in BMP stored in BGR order
-				p[i+0] = b[j+2]
-				p[i+1] = b[j+1]
-				p[i+2] = b[j+0]
-				p[i+3] = 0xff
-			}
-			ix = ix + 1
-		}
-		return img
-	}
-	return nil
-}
-
-func (r *bitmapRecord) Draw(ctx *EmfContext) {
-	img := r.readImage()
-	if img == nil {
-		return
-	}
-
-}
-
 type BitbltRecord struct {
-	bitmapRecord
+	CommonBitmapRecord
 }
 
 func readBitbltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -253,8 +139,20 @@ func readBitbltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	return r.read(reader)
 }
 
+func (r *BitbltRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_BITBLT")
+
+	hbitmap := w32.CreateBitmap(int(r.xSrc), int(r.ySrc), w32.UINT(r.BmiSrc.BiPlanes), w32.UINT(r.BmiSrc.BiBitCount), r.BitsSrc)
+	MDC := w32.CreateCompatibleDC(0)
+	w32.SelectObject(MDC, w32.HGDIOBJ(hbitmap))
+
+	if !w32.BitBlt(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), MDC, int(r.xSrc), int(r.ySrc), w32.DWORD(r.BitBltRasterOperation)) {
+		log.Error("failed to run BitBlt")
+	}
+}
+
 type StretchbltRecord struct {
-	bitmapRecord
+	CommonBitmapRecord
 }
 
 func readStretchbltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -263,9 +161,20 @@ func readStretchbltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	return r.read(reader)
 }
 
+func (r *StretchbltRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_STRETCHBLT")
+
+	hbitmap := w32.CreateBitmap(int(r.xSrc), int(r.ySrc), w32.UINT(r.BmiSrc.BiPlanes), w32.UINT(r.BmiSrc.BiBitCount), r.BitsSrc)
+	MDC := w32.CreateCompatibleDC(0)
+	w32.SelectObject(MDC, w32.HGDIOBJ(hbitmap))
+
+	if !w32.StretchBlt(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), MDC, int(r.xSrc), int(r.ySrc), int(r.cxSrc), int(r.cySrc), w32.DWORD(r.BitBltRasterOperation)) {
+		log.Error("failed to run StretchBlt")
+	}
+}
+
 type StretchdibitsRecord struct {
-	// brings two unused fields: XformSrc and BkColorSrc
-	bitmapRecord
+	CommonBitmapRecord
 }
 
 func readStretchdibitsRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
@@ -340,11 +249,24 @@ func readStretchdibitsRecord(reader *bytes.Reader, size uint32) (Recorder, error
 	}
 
 	// skipping UndefinedSpace2
-	reader.Seek(int64(r.offBitsSrc-80-r.BmiSrc.HeaderSize), os.SEEK_CUR)
+	reader.Seek(int64(r.offBitsSrc-80-r.BmiSrc.BiSize), os.SEEK_CUR)
 	r.BitsSrc = make([]byte, r.cbBitsSrc)
 	if _, err := reader.Read(r.BitsSrc); err != nil {
 		return nil, err
 	}
 
 	return r, nil
+}
+
+func (r *StretchdibitsRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_STRETCHDIBITS")
+
+	bmimapinfo := w32.BITMAPINFO{
+		BmiHeader: r.BmiSrc,
+		BmiColors: &w32.RGBQUAD{0, 0, 0, 0},
+	}
+
+	if ret := w32.StretchDIBits(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), int(r.xSrc), int(r.ySrc), int(r.cxSrc), int(r.cySrc), r.BitsSrc, &bmimapinfo, w32.UINT(r.UsageSrc), w32.DWORD(r.BitBltRasterOperation)); ret == 0 || ret == w32.GDI_ERROR {
+		log.Error("failed to run StretchDIBits")
+	}
 }
