@@ -39,9 +39,9 @@ func ReadFile(data []byte) *EmfFile {
 
 func (f *EmfFile) DrawToPNG(output string) error {
 
-	bounds := f.Header.Original.Bounds
-	width := int(bounds.Width()) + 1
-	height := int(bounds.Height()) + 1
+	device := f.Header.Original.Device
+	width := int(device.CX) + 1
+	height := int(device.CY) + 1
 
 	emfdc := NewEmfContext(width, height)
 

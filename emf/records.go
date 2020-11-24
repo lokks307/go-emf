@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/lokks307/go-emf/w32"
 	log "github.com/sirupsen/logrus"
@@ -1224,6 +1225,10 @@ func readExttextoutwRecord(reader *bytes.Reader, size uint32) (Recorder, error) 
 
 func (r *ExttextoutwRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_EXTTEXTOUTW (", r.wEmrText.OutputString, ")")
+
+	if strings.TrimSpace(r.wEmrText.OutputString) == "" {
+		return
+	}
 
 	w32.SetGraphicsMode(ctx.MDC, int(r.iGraphicsMode))
 
