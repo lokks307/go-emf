@@ -9,10 +9,6 @@ import (
 	"github.com/lokks307/go-emf/w32"
 )
 
-type LogPaletteEntry struct {
-	_, Blue, Green, Red uint8
-}
-
 func readLogPenEx(reader *bytes.Reader) (w32.LOGPENEX, error) {
 	r := w32.LOGPENEX{}
 	if err := binary.Read(reader, binary.LittleEndian, &r.PenStyle); err != nil {
@@ -76,16 +72,16 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 		return r, err
 	}
 
-	// UndefinedSpace1
-	reader.Seek(int64(int(r.offString)-(offset-reader.Len())), os.SEEK_CUR)
+	reader.Seek(int64(int(r.offString)-(offset-reader.Len())), os.SEEK_CUR) // UndefinedSpace1
+
 	b := make([]uint16, r.Chars)
 	if err := binary.Read(reader, binary.LittleEndian, &b); err != nil {
 		return r, err
 	}
 	r.OutputString = string(utf16.Decode(b))
 
-	// UndefinedSpace2
-	reader.Seek(int64(int(r.offDx)-(offset-reader.Len())), os.SEEK_CUR)
+	reader.Seek(int64(int(r.offDx)-(offset-reader.Len())), os.SEEK_CUR) // UndefinedSpace2
+
 	r.OutputDx = make([]int32, r.Chars)
 	if err := binary.Read(reader, binary.LittleEndian, &r.OutputDx); err != nil {
 		return r, err
@@ -117,4 +113,83 @@ type RegionDataHeader struct {
 type RegionData struct {
 	RegionDataHeader
 	Data []w32.RECT
+}
+
+type WMFCOLORREF struct {
+	Red      byte
+	Green    byte
+	Blue     byte
+	Reseverd byte
+}
+
+func (m WMFCOLORREF) ColorRef() w32.COLORREF {
+	ret := w32.COLORREF((uint32(m.Red)) | (uint32(m.Green) << 8) | (uint32(m.Blue) << 16))
+	//log.Infof("RGB 0x%08x", ret)
+	return ret
+}
+
+type WMFLOGBRUSH struct {
+	BrushStyle uint32
+	Color      WMFCOLORREF
+	BrushHatch uint32
+}
+
+func (m WMFLOGBRUSH) LogBrush() w32.LOGBRUSH {
+	return w32.LOGBRUSH{
+		BrushStyle: m.BrushStyle,
+		Color:      m.Color.ColorRef(),
+		BrushHatch: m.BrushHatch,
+	}
+}
+
+type WMFLOGPEN struct {
+	PenStyle uint32
+	Width    w32.POINT
+	ColorRef WMFCOLORREF
+}
+
+func (m WMFLOGPEN) LogPen() w32.LOGPEN {
+	return w32.LOGPEN{
+		PenStyle: m.PenStyle,
+		Width:    m.Width,
+		ColorRef: m.ColorRef.ColorRef(),
+	}
+}
+
+type WMFLOGPENEX struct {
+	PenStyle        uint32
+	Width           uint32
+	BrushStyle      uint32
+	ColorRef        WMFCOLORREF
+	BrushHatch      uint32
+	NumStyleEntries uint32
+	StyleEntry      []uint32
+}
+
+func (m WMFLOGPENEX) LogPenEx() w32.LOGPENEX {
+	return w32.LOGPENEX{
+		PenStyle:        m.PenStyle,
+		Width:           m.Width,
+		BrushStyle:      m.BrushStyle,
+		ColorRef:        m.ColorRef.ColorRef(),
+		BrushHatch:      m.BrushHatch,
+		NumStyleEntries: m.NumStyleEntries,
+		StyleEntry:      m.StyleEntry,
+	}
+}
+
+func readLogPalette(reader *bytes.Reader) (w32.LOGPALETTE, error) {
+	r := w32.LOGPALETTE{}
+	if err := binary.Read(reader, binary.LittleEndian, &r.Version); err != nil {
+		return r, err
+	}
+	if err := binary.Read(reader, binary.LittleEndian, &r.NumberOfEntries); err != nil {
+		return r, err
+	}
+	r.PaletteEntries = make([]w32.COLORREF, r.NumberOfEntries)
+	if err := binary.Read(reader, binary.LittleEndian, &r.PaletteEntries); err != nil {
+		return r, err
+	}
+
+	return r, nil
 }

@@ -112,6 +112,11 @@ var (
 	setTextJustification      = gdi32.NewProc("SetTextJustification")
 	fillRgn                   = gdi32.NewProc("FillRgn")
 	createRectRgnIndirect     = gdi32.NewProc("CreateRectRgnIndirect")
+	setGraphicsMode           = gdi32.NewProc("SetGraphicsMode")
+	createPalette             = gdi32.NewProc("CreatePalette")
+	selectPalette             = gdi32.NewProc("SelectPalette")
+	setBitmapBits             = gdi32.NewProc("SetBitmapBits")
+	createDIBitmap            = gdi32.NewProc("CreateDIBitmap")
 )
 
 func GetDeviceCaps(hdc HDC, index int) int {
@@ -219,13 +224,17 @@ func CreateCompatibleBitmap(hdc HDC, width, height int) HBITMAP {
 	return HBITMAP(ret)
 }
 
-func CreateBitmap(width, height int, planes, bitCount UINT, bits []byte) HBITMAP {
+func CreateBitmap(nWidth, nHeight int, nPlanes, nBitCount UINT, lpBits []byte) HBITMAP {
+	if len(lpBits) == 0 {
+		return HBITMAP(0)
+	}
+
 	ret, _, _ := createBitmap.Call(
-		uintptr(width),
-		uintptr(height),
-		uintptr(planes),
-		uintptr(bitCount),
-		uintptr(unsafe.Pointer(&bits[0])),
+		uintptr(nWidth),
+		uintptr(nHeight),
+		uintptr(nPlanes),
+		uintptr(nBitCount),
+		uintptr(unsafe.Pointer(&lpBits[0])),
 	)
 	return HBITMAP(ret)
 }
@@ -303,7 +312,12 @@ func EndPage(hdc HDC) int {
 	return int(ret)
 }
 
-func ExtCreatePen(dwPenStyle, dwWidth uint, lplb *LOGBRUSH, dwStyleCount uint, lpStyle []uint) HPEN {
+func ExtCreatePen(dwPenStyle, dwWidth DWORD, lplb *LOGBRUSH, dwStyleCount DWORD, lpStyle []DWORD) HPEN {
+
+	if len(lpStyle) == 0 {
+		lpStyle = append(lpStyle, DWORD(0))
+	}
+
 	ret, _, _ := extCreatePen.Call(
 		uintptr(dwPenStyle),
 		uintptr(dwWidth),
@@ -506,6 +520,10 @@ func StretchBlt(hdcDest HDC, nXOriginDest, nYOriginDest, nWidthDest, nHeightDest
 }
 
 func SetDIBitsToDevice(hdc HDC, xDest, yDest, dwWidth, dwHeight, xSrc, ySrc int, uStartScan, cScanLines uint, lpvBits []byte, lpbmi *BITMAPINFO, fuColorUse uint) int {
+	if len(lpvBits) == 0 {
+		return 0
+	}
+
 	ret, _, _ := setDIBitsToDevice.Call(
 		uintptr(hdc),
 		uintptr(xDest),
@@ -701,6 +719,10 @@ func Chord(hdc HDC, x1, y1, x2, y2, x3, y3, x4, y4 int) bool {
 }
 
 func Polygon(hdc HDC, apt []POINT, cpt int) bool {
+	if len(apt) == 0 {
+		return false
+	}
+
 	ret, _, _ := polygon.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(&apt[0])),
@@ -710,6 +732,10 @@ func Polygon(hdc HDC, apt []POINT, cpt int) bool {
 }
 
 func Polyline(hdc HDC, apt []POINT, cpt int) bool {
+	if len(apt) == 0 {
+		return false
+	}
+
 	ret, _, _ := polyline.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(&apt[0])),
@@ -719,6 +745,10 @@ func Polyline(hdc HDC, apt []POINT, cpt int) bool {
 }
 
 func PolyBezier(hdc HDC, apt []POINT, cpt DWORD) bool {
+	if len(apt) == 0 {
+		return false
+	}
+
 	ret, _, _ := polyBezier.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(&apt[0])),
@@ -950,6 +980,10 @@ func CreatePenIndirect(plpen *LOGPEN) HPEN {
 
 func ExtTextOutW(hdc HDC, x, y int, options UINT, lprect *RECT, lpString string, c UINT, lpDx []INT) bool {
 
+	if len(lpDx) == 0 {
+		lpDx = make([]INT, 1)
+	}
+
 	lpStringUint16 := syscall.StringToUTF16Ptr(lpString)
 
 	ret, _, _ := extTextOutW.Call(
@@ -966,6 +1000,10 @@ func ExtTextOutW(hdc HDC, x, y int, options UINT, lprect *RECT, lpString string,
 }
 
 func PolyBezierTo(hdc HDC, apt []POINT, cpt DWORD) bool {
+	if len(apt) == 0 {
+		return false
+	}
+
 	ret, _, _ := polyBezierTo.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(&apt[0])),
@@ -975,6 +1013,10 @@ func PolyBezierTo(hdc HDC, apt []POINT, cpt DWORD) bool {
 }
 
 func PolylineTo(hdc HDC, apt []POINT, cpt DWORD) bool {
+	if len(apt) == 0 {
+		return false
+	}
+
 	ret, _, _ := polylineTo.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(&apt[0])),
@@ -984,6 +1026,10 @@ func PolylineTo(hdc HDC, apt []POINT, cpt DWORD) bool {
 }
 
 func PolyPolygon(hdc HDC, apt []POINT, asz []int, csz int) bool {
+	if len(apt) == 0 || len(asz) == 0 {
+		return false
+	}
+
 	ret, _, _ := polyPolygon.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(&apt[0])),
@@ -994,6 +1040,10 @@ func PolyPolygon(hdc HDC, apt []POINT, asz []int, csz int) bool {
 }
 
 func StretchDIBits(hdc HDC, xDest, yDest, destWidth, destHeight, xSrc, ySrc, srcWidth, srcHeight int, lpBits []byte, lpbmi *BITMAPINFO, iUsage UINT, rop DWORD) int {
+	if len(lpBits) == 0 {
+		return 0
+	}
+
 	ret, _, _ := stretchDIBits.Call(
 		uintptr(hdc),
 		uintptr(xDest),
@@ -1089,4 +1139,61 @@ func CreateRectRgnIndirect(lprect *RECT) HRGN {
 		uintptr(unsafe.Pointer(lprect)),
 	)
 	return HRGN(ret)
+}
+
+func SetGraphicsMode(hdc HDC, iMode int) int {
+	ret, _, _ := setGraphicsMode.Call(
+		uintptr(hdc),
+		uintptr(iMode),
+	)
+	return int(ret)
+}
+
+func CreatePalette(plpal *LOGPALETTE) HPALETTE {
+	ret, _, _ := createPalette.Call(
+		uintptr(unsafe.Pointer(plpal)),
+	)
+	return HPALETTE(ret)
+}
+
+func SelectPalette(hdc HDC, hpal HPALETTE, bForceBkgd BOOL) HPALETTE {
+	ret, _, _ := fillRgn.Call(
+		uintptr(hdc),
+		uintptr(hpal),
+		uintptr(bForceBkgd),
+	)
+
+	return HPALETTE(ret)
+}
+
+func SetBitmapBits(bitmap HBITMAP, cb DWORD, pvBits []byte) LONG {
+	if len(pvBits) == 0 {
+		return LONG(0)
+	}
+
+	ret, _, _ := setBitmapBits.Call(
+		uintptr(bitmap),
+		uintptr(cb),
+		uintptr(unsafe.Pointer(&pvBits[0])),
+	)
+
+	return LONG(ret)
+}
+
+func CreateDIBitmap(hdc HDC, pbmih *BITMAPINFOHEADER, flInit DWORD, pjBits []byte, pbmi *BITMAPINFO, iUsage UINT) HBITMAP {
+	if len(pjBits) == 0 {
+		return HBITMAP(0)
+	}
+
+	ret, _, _ := setBitmapBits.Call(
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(pbmih)),
+		uintptr(flInit),
+		uintptr(unsafe.Pointer(&pjBits[0])),
+		uintptr(unsafe.Pointer(pbmi)),
+		uintptr(iUsage),
+	)
+
+	return HBITMAP(ret)
+
 }

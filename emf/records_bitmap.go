@@ -23,8 +23,9 @@ type CommonBitmapRecord struct {
 	// only for EMR_STRETCHBLT
 	cxSrc, cySrc int32
 
-	BmiSrc  w32.BITMAPINFOHEADER
-	BitsSrc []byte
+	BmiSrc    w32.BITMAPINFO
+	BitsSrc   []byte
+	BitsSrc24 []byte
 }
 
 // unified reader function for EMR_BITBLT and EMR_STRETCHBLT
@@ -126,6 +127,15 @@ func (r *CommonBitmapRecord) read(reader *bytes.Reader) (Recorder, error) {
 		return nil, err
 	}
 
+	r.BitsSrc24 = make([]byte, (r.cbBitsSrc*3)/4)
+	var j = 0
+	for i := 0; i < len(r.BitsSrc); i += 4 {
+		r.BitsSrc24[j] = r.BitsSrc[i+1]
+		r.BitsSrc24[j+1] = r.BitsSrc[i+2]
+		r.BitsSrc24[j+2] = r.BitsSrc[i+3]
+		j += 3
+	}
+
 	return r, nil
 }
 
@@ -142,8 +152,11 @@ func readBitbltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *BitbltRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_BITBLT")
 
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+
 	hbitmap := w32.CreateBitmap(int(r.xSrc), int(r.ySrc), w32.UINT(r.BmiSrc.BiPlanes), w32.UINT(r.BmiSrc.BiBitCount), r.BitsSrc)
-	MDC := w32.CreateCompatibleDC(0)
+	MDC := w32.CreateCompatibleDC(ctx.MDC)
 	w32.SelectObject(MDC, w32.HGDIOBJ(hbitmap))
 
 	if !w32.BitBlt(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), MDC, int(r.xSrc), int(r.ySrc), w32.DWORD(r.BitBltRasterOperation)) {
@@ -164,8 +177,11 @@ func readStretchbltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *StretchbltRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STRETCHBLT")
 
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+
 	hbitmap := w32.CreateBitmap(int(r.xSrc), int(r.ySrc), w32.UINT(r.BmiSrc.BiPlanes), w32.UINT(r.BmiSrc.BiBitCount), r.BitsSrc)
-	MDC := w32.CreateCompatibleDC(0)
+	MDC := w32.CreateCompatibleDC(ctx.MDC)
 	w32.SelectObject(MDC, w32.HGDIOBJ(hbitmap))
 
 	if !w32.StretchBlt(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), MDC, int(r.xSrc), int(r.ySrc), int(r.cxSrc), int(r.cySrc), w32.DWORD(r.BitBltRasterOperation)) {
@@ -242,14 +258,21 @@ func readStretchdibitsRecord(reader *bytes.Reader, size uint32) (Recorder, error
 	}
 
 	// BitmapBuffer
-	// skipping UndefinedSpace1
-	reader.Seek(int64(r.offBmiSrc-80), os.SEEK_CUR)
-	if err := binary.Read(reader, binary.LittleEndian, &r.BmiSrc); err != nil {
+
+	sizeUndefinedSpace1 := r.offBmiSrc - 80
+	if sizeUndefinedSpace1 > 0 {
+		reader.Seek(int64(sizeUndefinedSpace1), os.SEEK_CUR) // skipping UndefinedSpace1
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.BmiSrc.BITMAPINFOHEADER); err != nil {
 		return nil, err
 	}
 
-	// skipping UndefinedSpace2
-	reader.Seek(int64(r.offBitsSrc-80-r.BmiSrc.BiSize), os.SEEK_CUR)
+	sizeUndefinedSpace2 := r.offBitsSrc - r.offBmiSrc - r.cbBmiSrc
+	if sizeUndefinedSpace2 > 0 {
+		reader.Seek(int64(sizeUndefinedSpace2), os.SEEK_CUR) // skipping UndefinedSpace2
+	}
+
 	r.BitsSrc = make([]byte, r.cbBitsSrc)
 	if _, err := reader.Read(r.BitsSrc); err != nil {
 		return nil, err
@@ -261,12 +284,13 @@ func readStretchdibitsRecord(reader *bytes.Reader, size uint32) (Recorder, error
 func (r *StretchdibitsRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STRETCHDIBITS")
 
-	bmimapinfo := w32.BITMAPINFO{
-		BmiHeader: r.BmiSrc,
-		BmiColors: &w32.RGBQUAD{0, 0, 0, 0},
-	}
+	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
-	if ret := w32.StretchDIBits(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), int(r.xSrc), int(r.ySrc), int(r.cxSrc), int(r.cySrc), r.BitsSrc, &bmimapinfo, w32.UINT(r.UsageSrc), w32.DWORD(r.BitBltRasterOperation)); ret == 0 || ret == w32.GDI_ERROR {
+	BitsData := PixelConvert(r.BitsSrc, int(r.cxSrc), int(r.cySrc), int(r.BmiSrc.BiBitCount), ctx.BitCount)
+	r.BmiSrc.BiBitCount = uint16(ctx.BitCount)
+
+	if w32.StretchDIBits(ctx.MDC, int(r.xDest), int(r.yDest), int(r.cxDest), int(r.cyDest), int(r.xSrc), int(r.ySrc), int(r.cxSrc), int(r.cySrc), BitsData, &r.BmiSrc, w32.UINT(r.UsageSrc), w32.DWORD(r.BitBltRasterOperation)) == 0 {
 		log.Error("failed to run StretchDIBits")
 	}
 }

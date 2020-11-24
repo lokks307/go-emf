@@ -42,6 +42,7 @@ type (
 	HMODULE         HANDLE
 	HMONITOR        HANDLE
 	HPEN            HANDLE
+	HPALETTE        HANDLE
 	HRESULT         int32
 	HRGN            HANDLE
 	HRSRC           HANDLE
@@ -57,6 +58,19 @@ type (
 	HRAWINPUT       HANDLE
 	INT             int32
 	UINT            uint32
+	LONG            int32
+	LONGLONG        int64
+	INT8            int8
+	INT16           int16
+	INT32           int32
+	INT64           int64
+	DWORDLONG       uint64
+	DWORD32         uint32
+	DWORD64         uint64
+	DWORD_PTR       uintptr
+	BYTE            byte
+	BOOLEAN         BOOL
+	CHAR            byte
 )
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd162805.aspx
@@ -306,16 +320,17 @@ type EXCEPINFO struct {
 }
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd145035.aspx
+
 type LOGBRUSH struct {
-	LbStyle uint32
-	LbColor COLORREF
-	LbHatch uintptr
+	BrushStyle uint32
+	Color      COLORREF
+	BrushHatch uint32
 }
 
 type LOGPEN struct {
-	LopnStyle uint32
-	LopnWidth POINT
-	LopnColor COLORREF
+	PenStyle uint32
+	Width    POINT
+	ColorRef COLORREF
 }
 type LOGPENEX struct {
 	PenStyle        uint32
@@ -325,6 +340,12 @@ type LOGPENEX struct {
 	BrushHatch      uint32
 	NumStyleEntries uint32
 	StyleEntry      []uint32
+}
+
+type LOGPALETTE struct {
+	Version         uint16
+	NumberOfEntries uint16
+	PaletteEntries  []COLORREF
 }
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd183565.aspx
@@ -390,8 +411,8 @@ type RGBQUAD struct {
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd183375.aspx
 type BITMAPINFO struct {
-	BmiHeader BITMAPINFOHEADER
-	BmiColors *RGBQUAD
+	BITMAPINFOHEADER
+	//BmiColors []uint16
 }
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/dd183371.aspx
