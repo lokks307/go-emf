@@ -19,7 +19,7 @@ type Record struct {
 }
 
 func (r *Record) Draw(ctx *EmfContext) {
-	/* do nothing */
+	log.Trace("Unsupported Draw")
 }
 
 func readRecord(reader *bytes.Reader) (Recorder, error) {
@@ -284,7 +284,7 @@ func readSetbkmodeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 }
 
 func (r *SetbkmodeRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_SETBKMODE")
+	log.Tracef("Draw EMR_SETBKMODE %04x", r.BkMode)
 
 	if w32.SetBkMode(ctx.MDC, int(r.BkMode)) == 0 {
 		log.Error("failed to run SetBkMode")
@@ -688,6 +688,12 @@ func (r *SetworldtransformRecord) Draw(ctx *EmfContext) {
 	if !w32.SetWorldTransform(ctx.MDC, &r.XForm) {
 		log.Error("failed to run SetWorldTransform")
 	}
+
+	// oWidth := float32(ctx.Width)
+	// oHeight := float32(ctx.Height)
+
+	// ctx.Width = int(oWidth*r.XForm.M11 + oHeight*r.XForm.M21 + r.XForm.Dx)
+	// ctx.Height = int(oWidth*r.XForm.M12 + oHeight*r.XForm.M22 + r.XForm.Dy)
 }
 
 type ModifyworldtransformRecord struct {
@@ -719,6 +725,12 @@ func (r *ModifyworldtransformRecord) Draw(ctx *EmfContext) {
 	if !w32.ModifyWorldTransform(ctx.MDC, &r.XForm, w32.DWORD(r.ModifyWorldTransformMode)) {
 		log.Error("failed to run ModifyWorldTransform")
 	}
+
+	// oWidth := float32(ctx.Width)
+	// oHeight := float32(ctx.Height)
+
+	// ctx.Width = int(oWidth*r.XForm.M11 + oHeight*r.XForm.M21 + r.XForm.Dx)
+	// ctx.Height = int(oWidth*r.XForm.M12 + oHeight*r.XForm.M22 + r.XForm.Dy)
 }
 
 type SelectobjectRecord struct {
@@ -736,9 +748,6 @@ func readSelectobjectRecord(reader *bytes.Reader, size uint32) (Recorder, error)
 
 	return r, nil
 }
-
-// FIXME: handle following stockobject
-// DEFAULT_PALETTE, DC_BRUSH, DC_PEN
 
 func (r *SelectobjectRecord) Draw(ctx *EmfContext) {
 
@@ -760,6 +769,8 @@ func (r *SelectobjectRecord) Draw(ctx *EmfContext) {
 		w32.SelectObject(ctx.MDC, w32.HGDIOBJ(object))
 	case w32.HFONT:
 		w32.SelectObject(ctx.MDC, w32.HGDIOBJ(object))
+	default:
+		log.Error("Unknown type of object")
 	}
 }
 
@@ -787,7 +798,9 @@ func readCreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *CreatepenRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_CREATEPEN")
 
-	ctx.Objects[r.ihPen] = w32.CreatePenIndirect(&r.LogPen.LogPen())
+	w32logpen := r.LogPen.LogPen()
+
+	ctx.Objects[r.ihPen] = w32.CreatePenIndirect(&w32logpen)
 }
 
 type CreatebrushindirectRecord struct {
@@ -814,7 +827,75 @@ func readCreatebrushindirectRecord(reader *bytes.Reader, size uint32) (Recorder,
 func (r *CreatebrushindirectRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_CREATEBRUSHINDIRECT")
 
-	ctx.Objects[r.ihBrush] = w32.CreateBrushIndirect(&r.LogBrush.LogBrush())
+	w32logbrush := r.LogBrush.LogBrush()
+
+	ctx.Objects[r.ihBrush] = w32.CreateBrushIndirect(&w32logbrush)
+}
+
+type CreatepaletteRecord struct {
+	Record
+	ihPal      uint32
+	LogPalette w32.LOGPALETTE
+}
+
+func readCreatepaletteRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+	r := &CreatepaletteRecord{}
+	r.Record = Record{Type: EMR_CREATEBRUSHINDIRECT, Size: size}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.ihPal); err != nil {
+		return nil, err
+	}
+
+	var err error
+	r.LogPalette, err = readLogPalette(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *CreatepaletteRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_CREATEPALETTE")
+
+	ctx.Objects[r.ihPal] = w32.CreatePalette(&r.LogPalette)
+}
+
+type SelectPaletteRecord struct {
+	Record
+	ihPal uint32
+}
+
+func readSelectpaletteRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+	r := &SelectPaletteRecord{}
+	r.Record = Record{Type: EMR_SELECTPALETTE, Size: size}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.ihPal); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *SelectPaletteRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_SELECTPALETTE")
+
+	gdiObject, ok := StockObjects[r.ihPal]
+	if !ok {
+		gdiObject, ok = ctx.Objects[r.ihPal]
+		if !ok {
+			log.Errorf("Object 0x%x not found\n", r.ihPal)
+			return
+		}
+	}
+
+	switch object := gdiObject.(type) {
+	case w32.HPALETTE:
+		w32.SelectPalette(ctx.MDC, object, w32.FALSE)
+	default:
+		log.Error("Unknown type of object")
+	}
+
 }
 
 type DeleteobjectRecord struct {

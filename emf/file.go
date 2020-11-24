@@ -3,8 +3,6 @@ package emf
 import (
 	"bytes"
 	"image"
-	"image/png"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -53,7 +51,6 @@ func (f *EmfFile) DrawToPNG(output string) error {
 
 	var img *image.RGBA
 	var err error
-	var outf *os.File
 
 	img, err = emfdc.DrawToImage()
 	if err != nil {
@@ -61,18 +58,5 @@ func (f *EmfFile) DrawToPNG(output string) error {
 		return err
 	}
 
-	outf, err = os.Create(output)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	defer outf.Close()
-
-	err = png.Encode(outf, img)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	return nil
+	return ImageToPNG(img, output)
 }
