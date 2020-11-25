@@ -10,6 +10,12 @@ import (
 	"unsafe"
 )
 
+const (
+	LOGFONTSIZE       = 92
+	LOGFONTEXSIZE     = 348
+	LOGFONTPANOSESIZE = 320
+)
+
 // From MSDN: Windows Data Types
 // http://msdn.microsoft.com/en-us/library/s3f49ktz.aspx
 // http://msdn.microsoft.com/en-us/library/windows/desktop/aa383751.aspx
@@ -142,6 +148,23 @@ type LOGFONT struct {
 	FaceName       [LF_FACESIZE]uint16
 }
 
+type LOGFONTEX struct {
+	LOGFONT
+	FullName [LF_FULLFACESIZE]uint16
+	Style    [LF_STYLESIZE]uint16
+	Script   [LF_SCRIPTSIZE]uint16
+}
+
+type DESIGNVECTOR struct {
+	Signature uint32
+	NumAxes   uint32
+	Values    []int32
+}
+type LOGFONTEXDV struct {
+	LOGFONTEX
+	DESIGNVECTOR
+}
+
 func toString(s []uint16) string {
 	for i, c := range s {
 		if c == 0 {
@@ -165,22 +188,15 @@ func (f *LOGFONT) SetFaceName(name string) {
 	f.FaceName[len(s)] = 0
 }
 
-type ENUMLOGFONTEX struct {
-	LOGFONT
-	FullName [LF_FULLFACESIZE]uint16
-	Style    [LF_FACESIZE]uint16
-	Script   [LF_FACESIZE]uint16
-}
-
-func (f *ENUMLOGFONTEX) GetFullName() string {
+func (f *LOGFONTEX) GetFullName() string {
 	return toString(f.FullName[:])
 }
 
-func (f *ENUMLOGFONTEX) GetStyle() string {
+func (f *LOGFONTEX) GetStyle() string {
 	return toString(f.Style[:])
 }
 
-func (f *ENUMLOGFONTEX) GetScript() string {
+func (f *LOGFONTEX) GetScript() string {
 	return toString(f.Script[:])
 }
 

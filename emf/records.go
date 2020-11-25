@@ -24,26 +24,26 @@ func (r *Record) Draw(ctx *EmfContext) {
 }
 
 func readRecord(reader *bytes.Reader) (Recorder, error) {
-	var rec Record
+	var defaultRecord Record
 
-	if err := binary.Read(reader, binary.LittleEndian, &rec); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &defaultRecord); err != nil {
 		return nil, err
 	}
 
-	log.Tracef("Record type = %02x\n", rec.Type)
+	log.Tracef("Record type = %02x\n", defaultRecord.Type)
 
-	fn, ok := records[rec.Type]
+	fn, ok := records[defaultRecord.Type]
 	if !ok {
-		return nil, fmt.Errorf("Unknown record %#v found", rec.Type)
+		return nil, fmt.Errorf("Unknown record %#v found", defaultRecord.Type)
 	}
 
 	if fn != nil {
-		return fn(reader, rec.Size)
+		return fn(reader, defaultRecord.Size)
 	}
 
 	// default implementation skips record data
-	_, err := reader.Seek(int64(rec.Size-8), os.SEEK_CUR)
-	return &rec, err
+	_, err := reader.Seek(int64(defaultRecord.Size-8), os.SEEK_CUR)
+	return &defaultRecord, err
 }
 
 type HeaderRecord struct {
@@ -124,7 +124,7 @@ type SetwindowextexRecord struct {
 	Extent w32.SIZE
 }
 
-func readSetwindowextexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetWindowExtExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetwindowextexRecord{}
 	r.Record = Record{Type: EMR_SETWINDOWEXTEX, Size: size}
 
@@ -148,7 +148,7 @@ type SetwindoworgexRecord struct {
 	Origin w32.POINT
 }
 
-func readSetwindoworgexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetWindowOrgExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetwindoworgexRecord{}
 	r.Record = Record{Type: EMR_SETWINDOWORGEX, Size: size}
 
@@ -172,7 +172,7 @@ type SetviewportextexRecord struct {
 	Extent w32.SIZE
 }
 
-func readSetviewportextexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetViewportExtExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetviewportextexRecord{}
 	r.Record = Record{Type: EMR_SETVIEWPORTEXTEX, Size: size}
 
@@ -196,7 +196,7 @@ type SetviewportorgexRecord struct {
 	Origin w32.POINT
 }
 
-func readSetviewportorgexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetViewportOrgExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetviewportorgexRecord{}
 	r.Record = Record{Type: EMR_SETVIEWPORTORGEX, Size: size}
 
@@ -248,7 +248,7 @@ type SetmapmodeRecord struct {
 	MapMode uint32
 }
 
-func readSetmapmodeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetMapModeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 
 	r := &SetmapmodeRecord{}
 	r.Record = Record{Type: EMR_SETMAPMODE, Size: size}
@@ -273,7 +273,7 @@ type SetbkmodeRecord struct {
 	BkMode uint32
 }
 
-func readSetbkmodeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetBkModeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetbkmodeRecord{}
 	r.Record = Record{Type: EMR_SETBKMODE, Size: size}
 
@@ -298,7 +298,7 @@ type SetpolyfillmodeRecord struct {
 	PolygonFillMode uint32
 }
 
-func readSetpolyfillmodeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetPolyfillModeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetpolyfillmodeRecord{}
 	r.Record = Record{Type: EMR_SETPOLYFILLMODE, Size: size}
 
@@ -322,7 +322,7 @@ type SettextalignRecord struct {
 	TextAlignmentMode uint32
 }
 
-func readSettextalignRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetTextAlignRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SettextalignRecord{}
 	r.Record = Record{Type: EMR_SETTEXTALIGN, Size: size}
 
@@ -346,7 +346,7 @@ type SetstretchbltmodeRecord struct {
 	StretchMode uint32
 }
 
-func readSetstretchbltmodeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetStretchBltModeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetstretchbltmodeRecord{}
 	r.Record = Record{Type: EMR_SETSTRETCHBLTMODE, Size: size}
 
@@ -371,7 +371,7 @@ type SettextcolorRecord struct {
 	Color WMFCOLORREF
 }
 
-func readSettextcolorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetTextColorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SettextcolorRecord{}
 	r.Record = Record{Type: EMR_SETTEXTCOLOR, Size: size}
 
@@ -395,7 +395,7 @@ type SetbkcolorRecord struct {
 	Color WMFCOLORREF
 }
 
-func readSetbkcolorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetBkColorRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetbkcolorRecord{}
 	r.Record = Record{Type: EMR_SETBKCOLOR, Size: size}
 
@@ -422,7 +422,7 @@ type ScalewindowextexRecord struct {
 	yDenon uint32
 }
 
-func readScalewindowextexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readScaleWindowExtExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &ScalewindowextexRecord{}
 	r.Record = Record{Type: EMR_SCALEWINDOWEXTEX, Size: size}
 
@@ -457,7 +457,7 @@ type SetmetargnRecord struct {
 	Record
 }
 
-func readSetmetargnRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetMetaRgnRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetmetargnRecord{}
 	r.Record = Record{Type: EMR_SETMETARGN, Size: size}
 
@@ -477,7 +477,7 @@ type OffsetcliprgnRecord struct {
 	Offset w32.POINT
 }
 
-func readOffsetcliprgnRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readOffSetClipRgnRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &OffsetcliprgnRecord{}
 	r.Record = Record{Type: EMR_OFFSETCLIPRGN, Size: size}
 
@@ -502,7 +502,7 @@ type SettextjustificationRecord struct {
 	nBreakCount uint32
 }
 
-func readSettextjustificationRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetTextJustificationRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SettextjustificationRecord{}
 	r.Record = Record{Type: EMR_SETTEXTJUSTIFICATION, Size: size}
 
@@ -530,7 +530,7 @@ type MovetoexRecord struct {
 	Offset w32.POINT
 }
 
-func readMovetoexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readMoveToExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &MovetoexRecord{}
 	r.Record = Record{Type: EMR_MOVETOEX, Size: size}
 
@@ -608,7 +608,7 @@ type IntersectcliprectRecord struct {
 	Clip w32.RECT
 }
 
-func readIntersectcliprectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readIntersectClipRectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &IntersectcliprectRecord{}
 	r.Record = Record{Type: EMR_INTERSECTCLIPRECT, Size: size}
 
@@ -631,7 +631,7 @@ type SavedcRecord struct {
 	Record
 }
 
-func readSavedcRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSaveDCRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	return &SavedcRecord{Record: Record{Type: EMR_SAVEDC, Size: size}}, nil
 }
 
@@ -648,7 +648,7 @@ type RestoredcRecord struct {
 	SavedDC int32
 }
 
-func readRestoredcRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readRestoreDCRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &RestoredcRecord{}
 	r.Record = Record{Type: EMR_RESTOREDC, Size: size}
 
@@ -672,7 +672,7 @@ type SetworldtransformRecord struct {
 	XForm w32.XFORM
 }
 
-func readSetworldtransformRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetWorldTransformRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetworldtransformRecord{}
 	r.Record = Record{Type: EMR_SETWORLDTRANSFORM, Size: size}
 
@@ -703,7 +703,7 @@ type ModifyworldtransformRecord struct {
 	ModifyWorldTransformMode uint32
 }
 
-func readModifyworldtransformRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readModifyWorldTransformRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &ModifyworldtransformRecord{}
 	r.Record = Record{Type: EMR_MODIFYWORLDTRANSFORM, Size: size}
 
@@ -739,7 +739,7 @@ type SelectobjectRecord struct {
 	ihObject uint32
 }
 
-func readSelectobjectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSelectObjectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SelectobjectRecord{}
 	r.Record = Record{Type: EMR_SELECTOBJECT, Size: size}
 
@@ -752,7 +752,7 @@ func readSelectobjectRecord(reader *bytes.Reader, size uint32) (Recorder, error)
 
 func (r *SelectobjectRecord) Draw(ctx *EmfContext) {
 
-	log.Trace("Draw EMR_SELECTOBJECT")
+	log.Trace("Draw EMR_SELECTOBJECT ", r.ihObject)
 
 	gdiObject, ok := StockObjects[r.ihObject]
 	if !ok {
@@ -781,7 +781,7 @@ type CreatepenRecord struct {
 	LogPen WMFLOGPEN
 }
 
-func readCreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readCreatePenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &CreatepenRecord{}
 	r.Record = Record{Type: EMR_CREATEPEN, Size: size}
 
@@ -810,7 +810,7 @@ type CreatebrushindirectRecord struct {
 	LogBrush WMFLOGBRUSH
 }
 
-func readCreatebrushindirectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readCreateBrushIndirectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &CreatebrushindirectRecord{}
 	r.Record = Record{Type: EMR_CREATEBRUSHINDIRECT, Size: size}
 
@@ -839,7 +839,7 @@ type CreatepaletteRecord struct {
 	LogPalette w32.LOGPALETTE
 }
 
-func readCreatepaletteRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readCreatePaletteRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &CreatepaletteRecord{}
 	r.Record = Record{Type: EMR_CREATEBRUSHINDIRECT, Size: size}
 
@@ -867,7 +867,7 @@ type SelectPaletteRecord struct {
 	ihPal uint32
 }
 
-func readSelectpaletteRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSelectPaletteRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SelectPaletteRecord{}
 	r.Record = Record{Type: EMR_SELECTPALETTE, Size: size}
 
@@ -904,7 +904,7 @@ type DeleteobjectRecord struct {
 	ihObject uint32
 }
 
-func readDeleteobjectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readDeleteObjectRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &DeleteobjectRecord{}
 	r.Record = Record{Type: EMR_DELETEOBJECT, Size: size}
 
@@ -982,7 +982,7 @@ type LinetoRecord struct {
 	Point w32.POINT
 }
 
-func readLinetoRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readLineToRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &LinetoRecord{}
 	r.Record = Record{Type: EMR_LINETO, Size: size}
 
@@ -1004,7 +1004,7 @@ type BeginpathRecord struct {
 	Record
 }
 
-func readBeginpathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readBeginPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	return &BeginpathRecord{Record{Type: EMR_BEGINPATH, Size: size}}, nil
 }
 
@@ -1020,7 +1020,7 @@ type EndpathRecord struct {
 	Record
 }
 
-func readEndpathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readEndPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	return &EndpathRecord{Record{Type: EMR_ENDPATH, Size: size}}, nil
 }
 
@@ -1036,7 +1036,7 @@ type ClosefigureRecord struct {
 	Record
 }
 
-func readClosefigureRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readCloseFigureRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	return &ClosefigureRecord{Record{Type: EMR_CLOSEFIGURE, Size: size}}, nil
 }
 
@@ -1053,7 +1053,7 @@ type FillpathRecord struct {
 	Bounds w32.RECT
 }
 
-func readFillpathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readFillPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &FillpathRecord{}
 	r.Record = Record{Type: EMR_FILLPATH, Size: size}
 
@@ -1079,7 +1079,7 @@ type StrokeandfillpathRecord struct {
 	Bounds w32.RECT
 }
 
-func readStrokeandfillpathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readStrokeAndFillPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &StrokeandfillpathRecord{}
 	r.Record = Record{Type: EMR_STROKEANDFILLPATH, Size: size}
 
@@ -1105,7 +1105,7 @@ type StrokepathRecord struct {
 	Bounds w32.RECT
 }
 
-func readStrokepathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readStrokePathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &StrokepathRecord{}
 	r.Record = Record{Type: EMR_STROKEPATH, Size: size}
 
@@ -1131,7 +1131,7 @@ type SelectclippathRecord struct {
 	RegionMode uint32
 }
 
-func readSelectclippathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSelectClipPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SelectclippathRecord{}
 	r.Record = Record{Type: EMR_SELECTCLIPPATH, Size: size}
 
@@ -1156,10 +1156,11 @@ func readCommentRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 type ExtcreatefontindirectwRecord struct {
 	Record
 	ihFonts uint32
-	elw     w32.LOGFONT
+	elw     w32.LOGFONTEXDV
+	isExDV  bool
 }
 
-func readExtcreatefontindirectwRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readExtCreateFontIndirectWRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &ExtcreatefontindirectwRecord{}
 	r.Record = Record{Type: EMR_EXTCREATEFONTINDIRECTW, Size: size}
 
@@ -1167,23 +1168,59 @@ func readExtcreatefontindirectwRecord(reader *bytes.Reader, size uint32) (Record
 		return nil, err
 	}
 
-	var err error
+	sizeElw := size - 12
 
-	r.elw, err = readLogFont(reader)
-	if err != nil {
-		return nil, err
+	if sizeElw > w32.LOGFONTPANOSESIZE { // size of Elw = size - 12
+		r.isExDV = true
 	}
 
-	// skip the rest because we read only limited amount of data (LogFont) here
-	reader.Seek(int64(r.Size-(12+92)), os.SEEK_CUR)
+	var remainSize uint32
+
+	if !r.isExDV {
+		if err := binary.Read(reader, binary.LittleEndian, &r.elw.LOGFONT); err != nil {
+			return nil, err
+		}
+
+		remainSize = sizeElw - w32.LOGFONTSIZE
+
+	} else {
+		if err := binary.Read(reader, binary.LittleEndian, &r.elw.LOGFONTEX); err != nil {
+			return nil, err
+		}
+
+		if err := binary.Read(reader, binary.LittleEndian, &r.elw.Signature); err != nil {
+			return nil, err
+		}
+
+		if err := binary.Read(reader, binary.LittleEndian, &r.elw.NumAxes); err != nil {
+			return nil, err
+		}
+
+		if r.elw.NumAxes > 0 {
+			r.elw.Values = make([]int32, r.elw.NumAxes)
+			if err := binary.Read(reader, binary.LittleEndian, &r.elw.Values); err != nil {
+				return nil, err
+			}
+		}
+
+		remainSize = sizeElw - w32.LOGFONTEXSIZE - 8 - r.elw.NumAxes*4
+	}
+
+	if remainSize > 0 {
+		reader.Seek(int64(remainSize), os.SEEK_CUR)
+	}
 
 	return r, nil
 }
 
 func (r *ExtcreatefontindirectwRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_EXTCREATEFONTINDIRECTW")
+	log.Trace("Draw EMR_EXTCREATEFONTINDIRECTW ", r.ihFonts)
 
-	ctx.Objects[r.ihFonts] = w32.CreateFontIndirectW(&r.elw)
+	if r.isExDV {
+		ctx.Objects[r.ihFonts] = w32.CreateFontIndirectExW(&r.elw)
+	} else {
+		ctx.Objects[r.ihFonts] = w32.CreateFontIndirectW(&r.elw.LOGFONT)
+	}
 }
 
 type ExttextoutwRecord struct {
@@ -1194,7 +1231,7 @@ type ExttextoutwRecord struct {
 	wEmrText         EmrText
 }
 
-func readExttextoutwRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readExtTextOutWRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &ExttextoutwRecord{}
 	r.Record = Record{Type: EMR_EXTTEXTOUTW, Size: size}
 
@@ -1253,7 +1290,7 @@ type Polybezier16Record struct {
 	aPoints []PointS
 }
 
-func readPolybezier16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readPolyBezier16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &Polybezier16Record{}
 	r.Record = Record{Type: EMR_POLYBEZIER16, Size: size}
 
@@ -1339,7 +1376,7 @@ type Polyline16Record struct {
 	aPoints []PointS
 }
 
-func readPolyline16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readPolyLine16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &Polyline16Record{}
 	r.Record = Record{Type: EMR_POLYLINE16, Size: size}
 
@@ -1382,7 +1419,7 @@ type Polybezierto16Record struct {
 	aPoints []PointS
 }
 
-func readPolybezierto16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readPolyBezierTo16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &Polybezierto16Record{}
 	r.Record = Record{Type: EMR_POLYBEZIERTO16, Size: size}
 
@@ -1425,7 +1462,7 @@ type Polylineto16Record struct {
 	aPoints []PointS
 }
 
-func readPolylineto16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readPolyLineTo16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &Polylineto16Record{}
 	r.Record = Record{Type: EMR_POLYLINETO16, Size: size}
 
@@ -1470,7 +1507,7 @@ type Polypolygon16Record struct {
 	aPoints           []PointS
 }
 
-func readPolypolygon16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readPolyPolygon16Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &Polypolygon16Record{}
 	r.Record = Record{Type: EMR_POLYPOLYGON16, Size: size}
 
@@ -1528,7 +1565,7 @@ type ExtcreatepenRecord struct {
 	BitsSrc         []byte
 }
 
-func readExtcreatepenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readExtCreatePenRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &ExtcreatepenRecord{}
 	r.Record = Record{Type: EMR_EXTCREATEPEN, Size: size}
 
@@ -1607,7 +1644,7 @@ type SeticmmodeRecord struct {
 	ICMMode uint32
 }
 
-func readSeticmmodeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetICMModeRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SeticmmodeRecord{}
 	r.Record = Record{Type: EMR_SETICMMODE, Size: size}
 
@@ -1623,7 +1660,7 @@ type SetbrushorgexRecord struct {
 	Origin w32.POINT
 }
 
-func readSetbrushorgexRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetBrushOrgExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetbrushorgexRecord{}
 	r.Record = Record{Type: EMR_SETBRUSHORGEX, Size: size}
 
@@ -1648,7 +1685,7 @@ type SetpixelvRecord struct {
 	Color WMFCOLORREF
 }
 
-func readSetpixelvRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetPixelvRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetpixelvRecord{}
 	r.Record = Record{Type: EMR_SETPIXELV, Size: size}
 
@@ -1676,7 +1713,7 @@ type SetmapperflagsRecord struct {
 	Flags uint32
 }
 
-func readSetmapperflagsRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetMapperFlagsRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &SetmapperflagsRecord{}
 	r.Record = Record{Type: EMR_SETMAPPERFLAGS, Size: size}
 
@@ -1700,7 +1737,7 @@ type Setrop2Record struct {
 	ROP2Mode uint32
 }
 
-func readSetrop2Record(reader *bytes.Reader, size uint32) (Recorder, error) {
+func readSetROP2Record(reader *bytes.Reader, size uint32) (Recorder, error) {
 	r := &Setrop2Record{}
 	r.Record = Record{Type: EMR_SETROP2, Size: size}
 
@@ -1716,5 +1753,91 @@ func (r *Setrop2Record) Draw(ctx *EmfContext) {
 
 	if w32.SetROP2(ctx.MDC, int(r.ROP2Mode)) == 0 {
 		log.Error("failed to run SetROP2")
+	}
+}
+
+type SetmiterlimitRecord struct {
+	Record
+	MiterLimit uint32
+}
+
+func readSetMiterLimitRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+	r := &SetmiterlimitRecord{}
+	r.Record = Record{Type: EMR_SETMITERLIMIT, Size: size}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.MiterLimit); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *SetmiterlimitRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_SETMITERLIMIT ", r.MiterLimit)
+
+	var old float32
+
+	if !w32.SetMiterLimit(ctx.MDC, float32(r.MiterLimit), &old) {
+		log.Error("failed to run SetMiterLimit")
+	}
+}
+
+type ExtSelectClipRgnRecord struct {
+	Record
+	RgnDataSize uint32
+	RegionMode  uint32
+	RgnData     RegionData
+}
+
+func readRegionData(reader *bytes.Reader) (RegionData, error) {
+	r := RegionData{}
+	if err := binary.Read(reader, binary.LittleEndian, &r.RegionDataHeader); err != nil {
+		return r, err
+	}
+
+	r.Data = make([]w32.RECT, r.RegionDataHeader.CountRects)
+	if err := binary.Read(reader, binary.LittleEndian, &r.Data); err != nil {
+		return r, err
+	}
+
+	return r, nil
+}
+
+func readExtSelectClipRgnRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+	r := &ExtSelectClipRgnRecord{}
+	r.Record = Record{Type: EMR_EXTSELECTCLIPRGN, Size: size}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.RgnDataSize); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.RegionMode); err != nil {
+		return nil, err
+	}
+
+	var err error
+	r.RgnData, err = readRegionData(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *ExtSelectClipRgnRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_EXTSELECTCLIPRGN")
+
+	if r.RegionMode == RGN_COPY {
+		if w32.ExtSelectClipRgn(ctx.MDC, 0, RGN_COPY) == 0 { // default cliping region = null region
+			log.Error("failed to run ExtSelectClipRgn")
+		}
+	} else {
+		for _, rect := range r.RgnData.Data {
+			hrgn := w32.CreateRectRgn(int(rect.Left), int(rect.Top), int(rect.Right), int(rect.Bottom))
+
+			if w32.ExtSelectClipRgn(ctx.MDC, hrgn, int(r.RegionMode)) == 0 {
+				log.Error("failed to run ExtSelectClipRgn")
+			}
+		}
 	}
 }

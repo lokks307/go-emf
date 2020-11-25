@@ -90,14 +90,6 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 	return r, nil
 }
 
-func readLogFont(reader *bytes.Reader) (w32.LOGFONT, error) {
-	r := w32.LOGFONT{}
-	if err := binary.Read(reader, binary.LittleEndian, &r); err != nil {
-		return r, err
-	}
-	return r, nil
-}
-
 type PointS struct {
 	X, Y int16
 }
