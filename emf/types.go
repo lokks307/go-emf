@@ -43,11 +43,11 @@ func readLogPenEx(reader *bytes.Reader) (w32.LOGPENEX, error) {
 type EmrText struct {
 	Reference    w32.POINT
 	Chars        uint32
-	offString    uint32
+	OffString    uint32
 	Options      uint32
 	Rectangle    w32.RECT
-	offDx        uint32
-	OutputString string
+	OffDx        uint32
+	OutputString []uint16
 	OutputDx     []int32
 }
 
@@ -59,7 +59,7 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 	if err := binary.Read(reader, binary.LittleEndian, &r.Chars); err != nil {
 		return r, err
 	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.offString); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &r.OffString); err != nil {
 		return r, err
 	}
 	if err := binary.Read(reader, binary.LittleEndian, &r.Options); err != nil {
@@ -68,19 +68,18 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 	if err := binary.Read(reader, binary.LittleEndian, &r.Rectangle); err != nil {
 		return r, err
 	}
-	if err := binary.Read(reader, binary.LittleEndian, &r.offDx); err != nil {
+	if err := binary.Read(reader, binary.LittleEndian, &r.OffDx); err != nil {
 		return r, err
 	}
 
-	reader.Seek(int64(int(r.offString)-(offset-reader.Len())), os.SEEK_CUR) // UndefinedSpace1
+	reader.Seek(int64(int(r.OffString)-(offset-reader.Len())), os.SEEK_CUR) // UndefinedSpace1
 
-	b := make([]uint16, r.Chars)
-	if err := binary.Read(reader, binary.LittleEndian, &b); err != nil {
+	r.OutputString = make([]uint16, r.Chars)
+	if err := binary.Read(reader, binary.LittleEndian, &r.OutputString); err != nil {
 		return r, err
 	}
-	r.OutputString = string(utf16.Decode(b))
 
-	reader.Seek(int64(int(r.offDx)-(offset-reader.Len())), os.SEEK_CUR) // UndefinedSpace2
+	reader.Seek(int64(int(r.OffDx)-(offset-reader.Len())), os.SEEK_CUR) // UndefinedSpace2
 
 	r.OutputDx = make([]int32, r.Chars)
 	if err := binary.Read(reader, binary.LittleEndian, &r.OutputDx); err != nil {
@@ -88,6 +87,10 @@ func readEmrText(reader *bytes.Reader, offset int) (EmrText, error) {
 	}
 
 	return r, nil
+}
+
+func (t *EmrText) GetString() string {
+	return string(utf16.Decode(t.OutputString))
 }
 
 type PointS struct {

@@ -73,7 +73,7 @@ var records = map[uint32]func(*bytes.Reader, uint32) (Recorder, error){
 	EMR_SELECTCLIPPATH:          readSelectClipPathRecord,
 	EMR_ABORTPATH:               nil,
 	EMR_COMMENT:                 readCommentRecord,
-	EMR_FILLRGN:                 nil,
+	EMR_FILLRGN:                 readFillRgnRecord,
 	EMR_FRAMERGN:                nil,
 	EMR_INVERTRGN:               nil,
 	EMR_PAINTRGN:                nil,
