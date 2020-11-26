@@ -1206,6 +1206,10 @@ func CreateDIBitmap(hdc HDC, pbmih *BITMAPINFOHEADER, flInit DWORD, pjBits []byt
 }
 
 func SetMiterLimit(hdc HDC, limit float32, old *float32) bool {
+	if old == nil {
+		old = new(float32)
+	}
+
 	ret, _, _ := setMiterLimit.Call(
 		uintptr(hdc),
 		uintptr(limit),

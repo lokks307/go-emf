@@ -1193,13 +1193,13 @@ func readExtCreateFontIndirectWRecord(reader *bytes.Reader, size uint32) (Record
 func (r *ExtCreateFontIndirectWRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_EXTCREATEFONTINDIRECTW ", r.Elw.GetFaceName())
 
-	if r.isExDV {
-		ctx.Objects[r.IhFonts] = w32.CreateFontIndirectExW(&r.Elw)
-	} else {
-		ctx.Objects[r.IhFonts] = w32.CreateFontIndirectW(&r.Elw.LOGFONT)
-	}
+	// if r.isExDV {
+	// 	ctx.Objects[r.IhFonts] = w32.CreateFontIndirectExW(&r.Elw)
+	// } else {
+	// 	ctx.Objects[r.IhFonts] = w32.CreateFontIndirectW(&r.Elw.LOGFONT)
+	// }
 
-	//ctx.Objects[r.IhFonts] = w32.CreateFontIndirectW(&r.Elw.LOGFONT)
+	ctx.Objects[r.IhFonts] = w32.CreateFontIndirectW(&r.Elw.LOGFONT)
 }
 
 type ExtTextOutWRecord struct {
