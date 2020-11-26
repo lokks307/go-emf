@@ -795,6 +795,8 @@ const (
 const (
 	LF_FACESIZE     = 32
 	LF_FULLFACESIZE = 64
+	LF_STYLESIZE    = 32
+	LF_SCRIPTSIZE   = 32
 )
 
 const (

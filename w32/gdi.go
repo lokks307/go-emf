@@ -117,6 +117,8 @@ var (
 	selectPalette             = gdi32.NewProc("SelectPalette")
 	setBitmapBits             = gdi32.NewProc("SetBitmapBits")
 	createDIBitmap            = gdi32.NewProc("CreateDIBitmap")
+	setMiterLimit             = gdi32.NewProc("SetMiterLimit")
+	extSelectClipRgn          = gdi32.NewProc("ExtSelectClipRgn")
 )
 
 func GetDeviceCaps(hdc HDC, index int) int {
@@ -134,6 +136,11 @@ func DeleteObject(hObject HGDIOBJ) bool {
 
 func CreateFontIndirectW(logFont *LOGFONT) HFONT {
 	ret, _, _ := createFontIndirectW.Call(uintptr(unsafe.Pointer(logFont)))
+	return HFONT(ret)
+}
+
+func CreateFontIndirectExW(logFontExDv *LOGFONTEXDV) HFONT {
+	ret, _, _ := createFontIndirectExW.Call(uintptr(unsafe.Pointer(logFontExDv)))
 	return HFONT(ret)
 }
 
@@ -813,10 +820,10 @@ func (t FontType) String() string {
 	return strconv.Itoa(int(t))
 }
 
-func EnumFontFamiliesEx(hdc HDC, font LOGFONT, f func(font *ENUMLOGFONTEX, metric *ENUMTEXTMETRIC, fontType FontType) bool) {
+func EnumFontFamiliesEx(hdc HDC, font LOGFONT, f func(font *LOGFONTEX, metric *ENUMTEXTMETRIC, fontType FontType) bool) {
 	callback := syscall.NewCallback(func(font, metric uintptr, typ uint32, _ uintptr) uintptr {
 		if f(
-			(*ENUMLOGFONTEX)(unsafe.Pointer(font)),
+			(*LOGFONTEX)(unsafe.Pointer(font)),
 			(*ENUMTEXTMETRIC)(unsafe.Pointer(metric)),
 			FontType(typ),
 		) {
@@ -1185,7 +1192,7 @@ func CreateDIBitmap(hdc HDC, pbmih *BITMAPINFOHEADER, flInit DWORD, pjBits []byt
 		return HBITMAP(0)
 	}
 
-	ret, _, _ := setBitmapBits.Call(
+	ret, _, _ := createDIBitmap.Call(
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(pbmih)),
 		uintptr(flInit),
@@ -1196,4 +1203,27 @@ func CreateDIBitmap(hdc HDC, pbmih *BITMAPINFOHEADER, flInit DWORD, pjBits []byt
 
 	return HBITMAP(ret)
 
+}
+
+func SetMiterLimit(hdc HDC, limit float32, old *float32) bool {
+	if old == nil {
+		old = new(float32)
+	}
+
+	ret, _, _ := setMiterLimit.Call(
+		uintptr(hdc),
+		uintptr(limit),
+		uintptr(unsafe.Pointer(old)),
+	)
+
+	return ret != 0
+}
+
+func ExtSelectClipRgn(hdc HDC, hgrn HRGN, mode int) int {
+	ret, _, _ := extSelectClipRgn.Call(
+		uintptr(hdc),
+		uintptr(hgrn),
+		uintptr(mode),
+	)
+	return int(ret)
 }
