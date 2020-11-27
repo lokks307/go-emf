@@ -1016,6 +1016,22 @@ func (r *EndPathRecord) Draw(ctx *EmfContext) {
 	}
 }
 
+type AbortPathRecord struct {
+	Record
+}
+
+func readAbortPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+	return &AbortPathRecord{Record{Type: EMR_ENDPATH, Size: size}}, nil
+}
+
+func (r *AbortPathRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_ABORTPATH")
+
+	if !w32.AbortPath(ctx.MDC) {
+		log.Error("failed to run AbortPath")
+	}
+}
+
 type CloseFigureRecord struct {
 	Record
 }

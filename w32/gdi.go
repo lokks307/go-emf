@@ -93,6 +93,7 @@ var (
 	modifyWorldTransform      = gdi32.NewProc("ModifyWorldTransform")
 	beginPath                 = gdi32.NewProc("BeginPath")
 	endPath                   = gdi32.NewProc("EndPath")
+	abortPath                 = gdi32.NewProc("AbortPath")
 	closeFigure               = gdi32.NewProc("CloseFigure")
 	fillPath                  = gdi32.NewProc("FillPath")
 	strokeAndFillPath         = gdi32.NewProc("StrokeAndFillPath")
@@ -526,7 +527,7 @@ func StretchBlt(hdcDest HDC, nXOriginDest, nYOriginDest, nWidthDest, nHeightDest
 	return ret != 0
 }
 
-func SetDIBitsToDevice(hdc HDC, xDest, yDest, dwWidth, dwHeight, xSrc, ySrc int, uStartScan, cScanLines uint, lpvBits []byte, lpbmi *BITMAPINFO, fuColorUse uint) int {
+func SetDIBitsToDevice(hdc HDC, xDest, yDest int, dwWidth, dwHeight DWORD, xSrc, ySrc int, uStartScan, cScanLines UINT, lpvBits []byte, lpbmi *BITMAPINFO, fuColorUse UINT) int {
 	if len(lpvBits) == 0 {
 		return 0
 	}
@@ -945,6 +946,13 @@ func BeginPath(hdc HDC) bool {
 
 func EndPath(hdc HDC) bool {
 	ret, _, _ := endPath.Call(
+		uintptr(hdc),
+	)
+	return ret != 0
+}
+
+func AbortPath(hdc HDC) bool {
+	ret, _, _ := abortPath.Call(
 		uintptr(hdc),
 	)
 	return ret != 0

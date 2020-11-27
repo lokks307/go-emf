@@ -32,6 +32,22 @@ func ImageToPNG(img *image.RGBA, output string) error {
 	return nil
 }
 
+func PixelConvertFromMonochrome(src []byte, width, height, destBppBit int) []byte {
+	if 1 == destBppBit {
+		return src
+	}
+
+	destBppByte := destBppBit / 8
+
+	destPadding := (4 - (width * destBppByte % 4)) % 4
+
+	numPixels := width * height
+
+	dest := make([]byte, numPixels*destBppByte+destPadding*height)
+
+	return dest
+}
+
 func PixelConvert(src []byte, width, height, srcBppBit, destBppBit int) []byte {
 
 	//log.Info("PixelConvert: ", srcBppBit, "=>", destBppBit)

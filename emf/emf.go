@@ -79,7 +79,7 @@ func NewEmfContext(width, height int) *EmfContext {
 		log.Error("failed to create CreateCompatibleBitmap")
 	}
 
-	w32.SetTextAlign(memDC, TA_LEFT|TA_TOP)
+	// w32.SetTextAlign(memDC, TA_LEFT|TA_TOP)
 	w32.SetBkColor(memDC, 0x00FFFFFF)
 
 	w32.SelectObject(memDC, w32.HGDIOBJ(hBitmap))
