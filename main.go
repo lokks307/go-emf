@@ -20,7 +20,7 @@ func main() {
 
 	logDebugFlag := flag.Bool("debug", false, "print out debug message")
 	inFile := flag.String("in", "", "emf file to convert")
-	outFile := flag.String("out", "./out.pdf", "png file to output")
+	outFile := flag.String("out", "./out.png", "png file to output")
 
 	flag.Parse()
 

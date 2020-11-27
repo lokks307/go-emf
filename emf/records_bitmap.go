@@ -10,21 +10,21 @@ import (
 )
 
 type CommonBitmapInfo struct {
-	Bounds                w32.RECT
-	XDest                 int32
-	YDest                 int32
-	CxDest                int32
-	CyDest                int32
-	BitBltRasterOperation uint32
-	XSrc                  int32
-	YSrc                  int32
-	XformSrc              w32.XFORM
-	BkColorSrc            w32.COLORREF
-	UsageSrc              uint32
-	OffBmiSrc             uint32
-	CbBmiSrc              uint32
-	OffBitsSrc            uint32
-	CbBitsSrc             uint32
+	Bounds     w32.RECT
+	XDest      int32
+	YDest      int32
+	CxDest     int32
+	CyDest     int32
+	BitBltROP  uint32
+	XSrc       int32
+	YSrc       int32
+	XformSrc   w32.XFORM
+	BkColorSrc w32.COLORREF
+	UsageSrc   uint32
+	OffBmiSrc  uint32
+	CbBmiSrc   uint32
+	OffBitsSrc uint32
+	CbBitsSrc  uint32
 }
 
 type BitBltRecord struct {
@@ -85,7 +85,10 @@ func (r *BitBltRecord) Draw(ctx *EmfContext) {
 		srcDC := w32.CreateCompatibleDC(ctx.MDC)
 		w32.SelectObject(srcDC, w32.HGDIOBJ(hbitmap))
 
-		if !w32.BitBlt(ctx.MDC, int(r.XDest), int(r.YDest), int(r.CxDest), int(r.CyDest), srcDC, int(r.XSrc), int(r.YSrc), w32.DWORD(r.BitBltRasterOperation)) {
+		if !w32.BitBlt(
+			ctx.MDC, int(r.XDest), int(r.YDest), int(r.CxDest), int(r.CyDest), // dest
+			srcDC, int(r.XSrc), int(r.YSrc), // src
+			w32.DWORD(r.BitBltROP)) {
 			log.Error("failed to run BitBlt")
 		}
 
@@ -159,28 +162,31 @@ func (r *StretchbltRecord) Draw(ctx *EmfContext) {
 		srcDC := w32.CreateCompatibleDC(ctx.MDC)
 		w32.SelectObject(srcDC, w32.HGDIOBJ(hbitmap))
 
-		if !w32.StretchBlt(ctx.MDC, int(r.XDest), int(r.YDest), int(r.CxDest), int(r.CyDest), srcDC, int(r.XSrc), int(r.YSrc), int(r.CxSrc), int(r.CySrc), w32.DWORD(r.BitBltRasterOperation)) {
+		if !w32.StretchBlt(
+			ctx.MDC, int(r.XDest), int(r.YDest), int(r.CxDest), int(r.CyDest), // dest
+			srcDC, int(r.XSrc), int(r.YSrc), int(r.CxSrc), int(r.CySrc), // src
+			w32.DWORD(r.BitBltROP)) {
 			log.Error("failed to run StretchBlt")
 		}
 	}
 }
 
 type StretchDIBitsInfo struct {
-	Bounds                w32.RECT
-	XDest                 int32
-	YDest                 int32
-	XSrc                  int32
-	YSrc                  int32
-	CxSrc                 int32
-	CySrc                 int32
-	OffBmiSrc             uint32
-	CbBmiSrc              uint32
-	OffBitsSrc            uint32
-	CbBitsSrc             uint32
-	UsageSrc              uint32
-	BitBltRasterOperation uint32
-	CxDest                int32
-	CyDest                int32 // 72 bytes
+	Bounds     w32.RECT
+	XDest      int32
+	YDest      int32
+	XSrc       int32
+	YSrc       int32
+	CxSrc      int32
+	CySrc      int32
+	OffBmiSrc  uint32
+	CbBmiSrc   uint32
+	OffBitsSrc uint32
+	CbBitsSrc  uint32
+	UsageSrc   uint32
+	BitBltROP  uint32
+	CxDest     int32
+	CyDest     int32 // 72 bytes
 }
 type StretchDIBitsRecord struct {
 	Record            // 8 bytes
@@ -234,7 +240,10 @@ func (r *StretchDIBitsRecord) Draw(ctx *EmfContext) {
 		BitsData := PixelConvert(r.BitsSrc, int(r.BmiSrc.BiWidth), int(-r.BmiSrc.BiHeight), int(r.BmiSrc.BiBitCount), ctx.BitCount)
 		r.BmiSrc.BiBitCount = uint16(ctx.BitCount)
 
-		if w32.StretchDIBits(ctx.MDC, int(r.XDest), int(r.YDest), int(r.CxDest), int(r.CyDest), int(r.XSrc), int(r.YSrc), int(r.CxSrc), int(r.CySrc), BitsData, &r.BmiSrc, w32.UINT(r.UsageSrc), w32.DWORD(r.BitBltRasterOperation)) == 0 {
+		if w32.StretchDIBits(
+			ctx.MDC, int(r.XDest), int(r.YDest), int(r.CxDest), int(r.CyDest), // dest
+			int(r.XSrc), int(r.YSrc), int(r.CxSrc), int(r.CySrc), BitsData, &r.BmiSrc, // src
+			w32.UINT(r.UsageSrc), w32.DWORD(r.BitBltROP)) == 0 {
 			log.Error("failed to run StretchDIBits")
 		}
 	}
