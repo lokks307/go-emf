@@ -85,6 +85,8 @@ func NewEmfContext(width, height int) *EmfContext {
 	w32.SelectObject(memDC, w32.HGDIOBJ(hBitmap))
 	w32.Rectangle(memDC, 0, 0, width, height) // too fill white background
 
+	w32.SetGraphicsMode(memDC, w32.GM_ADVANCED)
+
 	defer func() {
 		w32.DeleteObject(w32.HGDIOBJ(hBitmap))
 	}()
