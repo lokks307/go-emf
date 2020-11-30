@@ -317,7 +317,7 @@ func readSetPolyfillModeRecord(reader *bytes.Reader, size uint32) (Recorder, err
 }
 
 func (r *SetPolyfillModeRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_SETPOLYFILLMODE")
+	log.Tracef("Draw EMR_SETPOLYFILLMODE 0x%02x", r.PolygonFillMode)
 
 	if w32.SetPolyFillMode(ctx.MDC, int(r.PolygonFillMode)) == 0 {
 		log.Error("failed to run SetPolyFillMode")
@@ -540,7 +540,7 @@ func readMoveToExRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 }
 
 func (r *MoveToExRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_MOVETOEX")
+	log.Tracef("Draw EMR_MOVETOEX (%d,%d)", r.Offset.X, r.Offset.Y)
 
 	if !w32.MoveToEx(ctx.MDC, int(r.Offset.X), int(r.Offset.Y), nil) {
 		log.Error("failed to run MoveToEx")
@@ -689,8 +689,7 @@ func (r *SetWorldTransformRecord) Draw(ctx *EmfContext) {
 			log.Error("failed to run SetWorldTransform")
 		}
 	} else {
-		ctx.SetDefaultXForm()
-		ctx.ScaleXForm(r.XForm.M11, r.XForm.M22, r.XForm.Dx, r.XForm.Dy)
+		ctx.SetXForm(r.XForm)
 		ctx.ScaleView()
 	}
 }
@@ -731,9 +730,9 @@ func (r *ModifyWorldTransformRecord) Draw(ctx *EmfContext) {
 		case MWT_SET:
 			ctx.SetXForm(r.XForm)
 		case MWT_LEFTMULTIPLY:
-			fallthrough
-		case MWT_RIGHTMULTIPLY:
 			ctx.ScaleXForm(r.XForm.M11, r.XForm.M22, r.XForm.Dx, r.XForm.Dy)
+		case MWT_RIGHTMULTIPLY:
+			ctx.ScaleXForm(1/r.XForm.M11, 1/r.XForm.M22, r.XForm.Dx, r.XForm.Dy)
 		}
 
 		ctx.ScaleView()
@@ -1000,7 +999,7 @@ func readLineToRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 }
 
 func (r *LineToRecord) Draw(ctx *EmfContext) {
-	log.Trace("Draw EMR_LINETO")
+	log.Tracef("Draw EMR_LINETO (%d,%d)", r.Point.X, r.Point.Y)
 
 	if !w32.LineTo(ctx.MDC, int(r.Point.X), int(r.Point.Y)) {
 		log.Error("failed to run LineTo")
@@ -1089,8 +1088,22 @@ func readFillPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *FillPathRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_FILLPATH")
 
-	if !w32.FillPath(ctx.MDC) {
-		log.Error("failed to run FillPath")
+	if ctx.GraphicsMode == w32.GM_ADVANCED {
+
+		hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+		oobj := w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+
+		if !w32.FillPath(ctx.MDC) {
+			log.Error("failed to run FillPath")
+		}
+
+		w32.SelectObject(ctx.MDC, oobj)
+
+	} else {
+
+		if !w32.FillPath(ctx.MDC) {
+			log.Error("failed to run FillPath")
+		}
 	}
 }
 
@@ -1299,7 +1312,7 @@ func (r *ExtTextOutWRecord) Draw(ctx *EmfContext) {
 	//w32.SetGraphicsMode(ctx.MDC, int(r.IGraphicsMode))
 
 	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+	oobj := w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	dx := make([]w32.INT, len(r.WEmrText.OutputDx))
 	for idx := range r.WEmrText.OutputDx {
@@ -1310,6 +1323,9 @@ func (r *ExtTextOutWRecord) Draw(ctx *EmfContext) {
 		w32.UINT(r.WEmrText.Options), &r.WEmrText.Rectangle, r.WEmrText.GetString(), w32.UINT(r.WEmrText.Chars), dx) {
 		log.Error("failed to run ExtTextOutW")
 	}
+
+	w32.SelectObject(ctx.MDC, oobj)
+
 }
 
 type PolyBezier16Record struct {
@@ -1882,4 +1898,24 @@ func (r *ExtSelectClipRgnRecord) Draw(ctx *EmfContext) {
 			}
 		}
 	}
+}
+
+type SetLayoutRecord struct {
+	Record
+	LayoutMode uint32
+}
+
+func readSetLayoutRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
+	r := &SetLayoutRecord{}
+	r.Record = Record{Type: EMR_SETLAYOUT, Size: size}
+
+	if err := binary.Read(reader, binary.LittleEndian, &r.LayoutMode); err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *SetLayoutRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_SETLAYOUT")
 }

@@ -116,7 +116,7 @@ var records = map[uint32]func(*bytes.Reader, uint32) (Recorder, error){
 	EMR_SETICMPROFILEA:          nil,
 	EMR_SETICMPROFILEW:          nil,
 	EMR_ALPHABLEND:              nil,
-	EMR_SETLAYOUT:               nil,
+	EMR_SETLAYOUT:               readSetLayoutRecord,
 	EMR_TRANSPARENTBLT:          nil,
 	EMR_GRADIENTFILL:            nil,
 	EMR_SETLINKEDUFIS:           nil,

@@ -11,42 +11,29 @@ import (
 // FIXME: handle following stockobject
 // DEFAULT_PALETTE, DC_BRUSH, DC_PEN
 
-var stockObjectData = map[uint32]interface{}{
-	WHITE_BRUSH:         w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00FFFFFF},
-	LTGRAY_BRUSH:        w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00C0C0C0},
-	GRAY_BRUSH:          w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00808080},
-	DKGRAY_BRUSH:        w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00404040},
-	BLACK_BRUSH:         w32.LOGBRUSH{BrushStyle: BS_SOLID, Color: 0x00000000},
-	NULL_BRUSH:          w32.LOGBRUSH{BrushStyle: BS_NULL},
-	WHITE_PEN:           w32.LOGPEN{PenStyle: PS_COSMETIC | PS_SOLID, ColorRef: 0x00FFFFFF, Width: w32.POINT{X: 1, Y: 0}},
-	BLACK_PEN:           w32.LOGPEN{PenStyle: PS_COSMETIC | PS_SOLID, ColorRef: 0x00000000, Width: w32.POINT{X: 1, Y: 0}},
-	NULL_PEN:            w32.LOGPEN{PenStyle: PS_NULL},
-	OEM_FIXED_FONT:      w32.LOGFONT{CharSet: OEM_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + FIXED_PITCH)},
-	ANSI_FIXED_FONT:     w32.LOGFONT{CharSet: ANSI_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + FIXED_PITCH)},
-	ANSI_VAR_FONT:       w32.LOGFONT{CharSet: ANSI_CHARSET, PitchAndFamily: (FF_DONTCARE<<4 + VARIABLE_PITCH)},
-	SYSTEM_FONT:         w32.LOGFONT{Height: 11},
-	DEVICE_DEFAULT_FONT: w32.LOGFONT{Height: 11},
-	SYSTEM_FIXED_FONT:   w32.LOGFONT{Height: 11},
-	DEFAULT_GUI_FONT:    w32.LOGFONT{Height: 11},
-}
-
 var StockObjects map[uint32]interface{}
 
 func init() {
-	StockObjects = make(map[uint32]interface{})
-
-	for key := range stockObjectData {
-
-		switch object := stockObjectData[key].(type) {
-		case w32.LOGPEN:
-			StockObjects[key] = w32.CreatePenIndirect(&object)
-		case w32.LOGBRUSH:
-			StockObjects[key] = w32.CreateBrushIndirect(&object)
-		case w32.LOGFONT:
-			StockObjects[key] = w32.CreateFontIndirectW(&object)
-		default:
-			log.Error("Unknown type of object")
-		}
+	StockObjects = map[uint32]interface{}{
+		WHITE_BRUSH:         w32.HBRUSH(w32.GetStockObject(WHITE_BRUSH)),
+		LTGRAY_BRUSH:        w32.HBRUSH(w32.GetStockObject(LTGRAY_BRUSH)),
+		GRAY_BRUSH:          w32.HBRUSH(w32.GetStockObject(GRAY_BRUSH)),
+		DKGRAY_BRUSH:        w32.HBRUSH(w32.GetStockObject(DKGRAY_BRUSH)),
+		BLACK_BRUSH:         w32.HBRUSH(w32.GetStockObject(BLACK_BRUSH)),
+		NULL_BRUSH:          w32.HBRUSH(w32.GetStockObject(NULL_BRUSH)),
+		DC_BRUSH:            w32.HBRUSH(w32.GetStockObject(DC_BRUSH)),
+		WHITE_PEN:           w32.HPEN(w32.GetStockObject(WHITE_PEN)),
+		BLACK_PEN:           w32.HPEN(w32.GetStockObject(BLACK_PEN)),
+		DC_PEN:              w32.HPEN(w32.GetStockObject(DC_PEN)),
+		NULL_PEN:            w32.HPEN(w32.GetStockObject(NULL_BRUSH)),
+		OEM_FIXED_FONT:      w32.HFONT(w32.GetStockObject(OEM_FIXED_FONT)),
+		ANSI_FIXED_FONT:     w32.HFONT(w32.GetStockObject(ANSI_FIXED_FONT)),
+		ANSI_VAR_FONT:       w32.HFONT(w32.GetStockObject(ANSI_VAR_FONT)),
+		SYSTEM_FONT:         w32.HFONT(w32.GetStockObject(SYSTEM_FONT)),
+		DEVICE_DEFAULT_FONT: w32.HFONT(w32.GetStockObject(DEVICE_DEFAULT_FONT)),
+		SYSTEM_FIXED_FONT:   w32.HFONT(w32.GetStockObject(SYSTEM_FIXED_FONT)),
+		DEFAULT_GUI_FONT:    w32.HFONT(w32.GetStockObject(DEFAULT_GUI_FONT)),
+		DEFAULT_PALETTE:     w32.HPALETTE(w32.GetStockObject(DEFAULT_PALETTE)),
 	}
 }
 
@@ -106,9 +93,7 @@ func NewEmfContext(view w32.RECT, window w32.SIZE) *EmfContext {
 	// w32.SetTextAlign(memDC, TA_LEFT|TA_TOP)
 	w32.SetBkColor(emf.MDC, 0x00FFFFFF)
 
-	if emf.GraphicsMode == w32.GM_ADVANCED {
-		w32.SetGraphicsMode(emf.MDC, w32.GM_ADVANCED)
-	}
+	w32.SetGraphicsMode(emf.MDC, emf.GraphicsMode)
 
 	w32.SelectObject(emf.MDC, w32.HGDIOBJ(hBitmap))
 	w32.Rectangle(emf.MDC, 0, 0, int(window.CX), int(window.CY)) // too fill white background
@@ -139,6 +124,7 @@ func (e *EmfContext) ScaleXForm(m11, m22, dx, dy float32) {
 }
 
 func (e *EmfContext) ScaleView() {
+	log.Info("XFORM = ", e.XForm)
 	w32.SetWindowExtEx(e.MDC, int(float32(e.Window.CX)*e.XForm.M11), int(float32(e.Window.CY)*e.XForm.M22), nil)
 	w32.SetViewportExtEx(e.MDC, int(float32(e.View.Right-e.View.Left)*e.XForm.M11), int(float32(e.View.Bottom-e.View.Top)*e.XForm.M22), nil)
 	// w32.SetWindowOrgEx(e.MDC, int(e.XForm.Dx), int(e.XForm.Dy), nil)

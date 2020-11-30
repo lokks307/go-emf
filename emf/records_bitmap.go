@@ -73,8 +73,8 @@ func readBitBltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *BitBltRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_BITBLT")
 
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if r.OffBmiSrc > 0 {
 
@@ -247,8 +247,8 @@ func readStretchBltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *StretchbltRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STRETCHBLT")
 
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if r.OffBmiSrc > 0 {
 
@@ -329,8 +329,8 @@ func readStretchDIBitsRecord(reader *bytes.Reader, size uint32) (Recorder, error
 func (r *StretchDIBitsRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STRETCHDIBITS")
 
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if r.OffBmiSrc > 0 {
 
@@ -407,8 +407,8 @@ func readSetDIBitsToDeviceRecord(reader *bytes.Reader, size uint32) (Recorder, e
 func (r *SetDIBitsToDeviceRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_SETDIBITSTODEVICE")
 
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
+	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
+	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if r.OffBmiSrc > 0 {
 
