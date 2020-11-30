@@ -120,6 +120,7 @@ var (
 	createDIBitmap            = gdi32.NewProc("CreateDIBitmap")
 	setMiterLimit             = gdi32.NewProc("SetMiterLimit")
 	extSelectClipRgn          = gdi32.NewProc("ExtSelectClipRgn")
+	selectClipPath            = gdi32.NewProc("SelectClipPath")
 )
 
 func GetDeviceCaps(hdc HDC, index int) int {
@@ -1234,4 +1235,12 @@ func ExtSelectClipRgn(hdc HDC, hgrn HRGN, mode int) int {
 		uintptr(mode),
 	)
 	return int(ret)
+}
+
+func SelectClipPath(hdc HDC, mode int) bool {
+	ret, _, _ := selectClipPath.Call(
+		uintptr(hdc),
+		uintptr(mode),
+	)
+	return ret != 0
 }

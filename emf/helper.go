@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ImageToPNG(img *image.RGBA, output string) error {
+func ImageToPNG(img *image.NRGBA, output string) error {
 
 	var err error
 	var outf *os.File

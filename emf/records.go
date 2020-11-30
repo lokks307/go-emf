@@ -684,9 +684,15 @@ func readSetWorldTransformRecord(reader *bytes.Reader, size uint32) (Recorder, e
 func (r *SetWorldTransformRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_SETWORLDTRANSFORM")
 
-	// if !w32.SetWorldTransform(ctx.MDC, &r.XForm) {
-	// 	log.Error("failed to run SetWorldTransform")
-	// }
+	if ctx.GraphicsMode == w32.GM_ADVANCED {
+		if !w32.SetWorldTransform(ctx.MDC, &r.XForm) {
+			log.Error("failed to run SetWorldTransform")
+		}
+	} else {
+		ctx.SetDefaultXForm()
+		ctx.ScaleXForm(r.XForm.M11, r.XForm.M22, r.XForm.Dx, r.XForm.Dy)
+		ctx.ScaleView()
+	}
 }
 
 type ModifyWorldTransformRecord struct {
@@ -713,9 +719,26 @@ func readModifyWorldTransformRecord(reader *bytes.Reader, size uint32) (Recorder
 func (r *ModifyWorldTransformRecord) Draw(ctx *EmfContext) {
 	log.Tracef("Draw EMR_MODIFYWORLDTRANSFORM 0x%02x", r.ModifyWorldTransformMode)
 
-	// if !w32.ModifyWorldTransform(ctx.MDC, &r.XForm, w32.DWORD(r.ModifyWorldTransformMode)) {
-	// 	log.Error("failed to run ModifyWorldTransform")
-	// }
+	if ctx.GraphicsMode == w32.GM_ADVANCED {
+		if !w32.ModifyWorldTransform(ctx.MDC, &r.XForm, w32.DWORD(r.ModifyWorldTransformMode)) {
+			log.Error("failed to run ModifyWorldTransform")
+		}
+	} else {
+
+		switch r.ModifyWorldTransformMode {
+		case MWT_IDENTITY:
+			ctx.SetDefaultXForm()
+		case MWT_SET:
+			ctx.SetXForm(r.XForm)
+		case MWT_LEFTMULTIPLY:
+			fallthrough
+		case MWT_RIGHTMULTIPLY:
+			ctx.ScaleXForm(r.XForm.M11, r.XForm.M22, r.XForm.Dx, r.XForm.Dy)
+		}
+
+		ctx.ScaleView()
+
+	}
 }
 
 type SelectObjectRecord struct {
@@ -1066,9 +1089,6 @@ func readFillPathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *FillPathRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_FILLPATH")
 
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
-
 	if !w32.FillPath(ctx.MDC) {
 		log.Error("failed to run FillPath")
 	}
@@ -1091,9 +1111,6 @@ func readStrokeAndFillPathRecord(reader *bytes.Reader, size uint32) (Recorder, e
 
 func (r *StrokeAndFillPathRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STROKEANDFILLPATH")
-
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if !w32.StrokeAndFillPath(ctx.MDC) {
 		log.Error("failed to run StrokeAndFillPath")
@@ -1118,9 +1135,6 @@ func readStrokePathRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *StrokePathRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STROKEPATH")
 
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
-
 	if !w32.StrokePath(ctx.MDC) {
 		log.Error("failed to run StrokePath")
 	}
@@ -1141,6 +1155,14 @@ func readSelectClipPathRecord(reader *bytes.Reader, size uint32) (Recorder, erro
 	return r, nil
 }
 
+func (r *SelectClipPathRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_SELECTCLIPPATH")
+
+	if !w32.SelectClipPath(ctx.MDC, int(r.RegionMode)) {
+		log.Error("failed to run StrokePath")
+	}
+}
+
 type CommentRecord struct {
 	Record
 }
@@ -1151,6 +1173,10 @@ func readCommentRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 	// skip record data
 	reader.Seek(int64(size-8), os.SEEK_CUR)
 	return r, nil
+}
+
+func (r *CommentRecord) Draw(ctx *EmfContext) {
+	log.Trace("Draw EMR_COMMENT")
 }
 
 type ExtCreateFontIndirectWRecord struct {
@@ -1315,9 +1341,6 @@ func readPolyBezier16Record(reader *bytes.Reader, size uint32) (Recorder, error)
 
 func (r *PolyBezier16Record) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_POLYBEZIER16")
-
-	hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	bezerPoints := make([]w32.POINT, r.Count)
 	for idx := range r.APoints {
@@ -1785,11 +1808,14 @@ func readSetMiterLimitRecord(reader *bytes.Reader, size uint32) (Recorder, error
 func (r *SetMiterLimitRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_SETMITERLIMIT ", r.MiterLimit)
 
+	/* FIXME
+
 	var old float32
 
 	if !w32.SetMiterLimit(ctx.MDC, float32(r.MiterLimit), &old) {
 		log.Error("failed to run SetMiterLimit")
 	}
+	*/
 }
 
 type ExtSelectClipRgnRecord struct {
