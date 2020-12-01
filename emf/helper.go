@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ImageToPNG(img *image.NRGBA, output string) error {
+func ImageToPNG(img []uint8, w, h int, output string) error {
 
 	var err error
 	var outf *os.File
@@ -23,7 +23,10 @@ func ImageToPNG(img *image.NRGBA, output string) error {
 	}
 	defer outf.Close()
 
-	err = png.Encode(outf, img)
+	grayImg := image.NewGray(image.Rect(0, 0, w, h))
+	grayImg.Pix = img
+
+	err = png.Encode(outf, grayImg)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -101,12 +104,12 @@ func PixelConvert(src []byte, width, height, srcBppBit, destBppBit int) []byte {
 	return dest
 }
 
-func DeviceContextToImage(srcDC w32.HDC, width, height int) (*image.RGBA, error) {
+func DeviceContextToImage(srcDC w32.HDC, width, height int) ([]uint8, error) {
 
 	destDC := w32.CreateCompatibleDC(srcDC)
 
 	if destDC == 0 {
-		return nil, errors.New("CreateCompatibleDC failed")
+		return []uint8{}, errors.New("CreateCompatibleDC failed")
 	}
 	defer w32.DeleteDC(destDC)
 
@@ -114,12 +117,12 @@ func DeviceContextToImage(srcDC w32.HDC, width, height int) (*image.RGBA, error)
 
 	oobj := w32.SelectObject(destDC, w32.HGDIOBJ(bitmap)) // attach bitmap to destDC
 	if oobj == 0 {
-		return nil, errors.New("SelectObject failed")
+		return []uint8{}, errors.New("SelectObject failed")
 	}
 	defer w32.SelectObject(destDC, oobj)
 
 	if bitmap == 0 {
-		return nil, errors.New("CreateCompatibleBitmap failed")
+		return []uint8{}, errors.New("CreateCompatibleBitmap failed")
 	}
 	defer w32.DeleteObject(w32.HGDIOBJ(bitmap))
 
@@ -141,31 +144,52 @@ func DeviceContextToImage(srcDC w32.HDC, width, height int) (*image.RGBA, error)
 	}()
 
 	if !w32.BitBlt(destDC, 0, 0, width, height, srcDC, 0, 0, w32.SRCCOPY) { // copy srcDC to destDC(bitmap)
-		return nil, errors.New("BitBlt failed")
+		return []uint8{}, errors.New("BitBlt failed")
 	}
 
 	if w32.GetDIBits(destDC, bitmap, 0, w32.UINT(height), memptr, &header, w32.DIB_RGB_COLORS) == 0 { // bitmap on destDC to memptr
-		return nil, errors.New("GetDIBits failed")
+		return []uint8{}, errors.New("GetDIBits failed")
 	}
 
-	rect := image.Rect(0, 0, width, height)
-	img := image.NewRGBA(rect)
-
-	i := 0
+	dim := height * width
+	grayImg := make([]uint8, dim)
 	src := uintptr(memptr)
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			v0 := *(*uint8)(unsafe.Pointer(src))
-			v1 := *(*uint8)(unsafe.Pointer(src + 1))
-			v2 := *(*uint8)(unsafe.Pointer(src + 2))
 
-			// BGRA => RGBA, and set A to 255
-			img.Pix[i], img.Pix[i+1], img.Pix[i+2], img.Pix[i+3] = v2, v1, v0, 255
+	for i := 0; i < dim; i++ {
+		grayImg[i] = *(*uint8)(unsafe.Pointer(src + 2)) // R
+		src += 4
+	}
 
-			i += 4
-			src += 4
+	return grayImg, nil
+}
+
+func CropImageByte(img []uint8, width, height, left, top, right, bottom int) []byte {
+
+	// rect (left, top, right, bottom) is inclusive image
+
+	if left <= right || bottom <= top {
+		return []uint8{}
+	}
+
+	if right >= width {
+		right = width - 1
+	}
+
+	if bottom >= height {
+		bottom = height - 1
+	}
+
+	cropImg := make([]uint8, (right-left)*(bottom-top))
+
+	var i int
+
+	for y := top; y <= bottom; y++ {
+		for x := left; x <= right; x++ {
+			cropImg[i] = img[y*width+x]
+			i++
 		}
 	}
 
-	return img, nil
+	return cropImg
+
 }

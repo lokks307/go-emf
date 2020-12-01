@@ -2,7 +2,6 @@ package emf
 
 import (
 	"bytes"
-	"image"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -50,14 +49,11 @@ func (f *EmfFile) DrawToPNG(output string) error {
 		f.Records[idx].Draw(emfdc)
 	}
 
-	var img *image.NRGBA
-	var err error
-
-	img, err = emfdc.DrawToImage(PAGE_AREA)
+	img, w, h, err := emfdc.DrawToImage(PAGE_AREA)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
-	return ImageToPNG(img, output)
+	return ImageToPNG(img, w, h, output)
 }
