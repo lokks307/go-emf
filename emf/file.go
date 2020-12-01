@@ -2,7 +2,6 @@ package emf
 
 import (
 	"bytes"
-	"image"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -10,6 +9,11 @@ import (
 const (
 	CROP_AREA = iota
 	PAGE_AREA
+)
+
+const (
+	DRAW_COLOR_IMAGE = iota
+	DRAW_GRAY_IMAGE
 )
 
 type EmfFile struct {
@@ -43,21 +47,36 @@ func ReadFile(data []byte) *EmfFile {
 	return emfFile
 }
 
-func (f *EmfFile) DrawToPNG(output string) error {
+func (f *EmfFile) DrawToGrayPNG(output string) error {
+	return f.drawToPNG(output, DRAW_GRAY_IMAGE)
+}
+
+func (f *EmfFile) DrawToColorPNG(output string) error {
+	return f.drawToPNG(output, DRAW_COLOR_IMAGE)
+}
+
+func (f *EmfFile) drawToPNG(output string, mode int) error {
 	emfdc := NewEmfContext(f.Header.Original.Bounds, f.Header.Original.Device)
 
 	for idx := range f.Records {
 		f.Records[idx].Draw(emfdc)
 	}
 
-	var img *image.NRGBA
-	var err error
+	if mode == DRAW_COLOR_IMAGE {
+		img, err := emfdc.DrawToColorImage(PAGE_AREA)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 
-	img, err = emfdc.DrawToImage(PAGE_AREA)
-	if err != nil {
-		log.Error(err)
-		return err
+		return ImageToPNG(img, output)
+	} else {
+		img, err := emfdc.DrawToGrayImage(PAGE_AREA)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		return ImageToPNG(img, output)
 	}
-
-	return ImageToPNG(img, output)
 }

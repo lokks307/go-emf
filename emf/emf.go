@@ -8,9 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// FIXME: handle following stockobject
-// DEFAULT_PALETTE, DC_BRUSH, DC_PEN
-
 var StockObjects map[uint32]interface{}
 
 func init() {
@@ -130,8 +127,15 @@ func (e *EmfContext) ScaleView() {
 	// w32.SetViewportOrgEx(e.MDC, int(-e.XForm.Dx), int(-e.XForm.Dy), nil)
 }
 
-func (e *EmfContext) DrawToImage(pMode int) (*image.NRGBA, error) {
+func (e *EmfContext) DrawToColorImage(pMode int) (interface{}, error) {
+	return e.drawToImage(pMode, DRAW_COLOR_IMAGE)
+}
 
+func (e *EmfContext) DrawToGrayImage(pMode int) (interface{}, error) {
+	return e.drawToImage(pMode, DRAW_GRAY_IMAGE)
+}
+
+func (e *EmfContext) drawToImage(pMode int, cMode int) (interface{}, error) {
 	bound := e.View
 	device := e.Window
 
@@ -151,13 +155,30 @@ func (e *EmfContext) DrawToImage(pMode int) (*image.NRGBA, error) {
 		bound.Bottom = device.CY
 	}
 
-	if img, err := DeviceContextToImage(e.MDC, int(device.CX), int(device.CY)); err != nil {
+	width := int(device.CX)
+	height := int(device.CY)
+
+	if gImg, cimg, err := DeviceContextToImage(e.MDC, width, height); err != nil {
 		return nil, err
 	} else {
-		if pMode == CROP_AREA {
-			return im.Crop(img, image.Rect(int(bound.Left), int(bound.Top), int(bound.Right), int(bound.Bottom))), nil
+
+		if cMode == DRAW_COLOR_IMAGE {
+			if pMode == CROP_AREA {
+				return im.Crop(cimg, image.Rect(int(bound.Left), int(bound.Top), int(bound.Right), int(bound.Bottom))), nil
+			} else {
+				return im.Crop(cimg, image.Rect(0, 0, width, height)), nil
+			}
 		} else {
-			return im.Crop(img, image.Rect(0, 0, int(device.CX), int(device.CY))), nil
+			if pMode == CROP_AREA {
+				width = int(bound.Right - bound.Left)
+				height = int(bound.Bottom - bound.Top)
+				gImg = CropImageByte(gImg, width, height, int(bound.Left), int(bound.Top), int(bound.Right), int(bound.Bottom))
+			}
+
+			grayImg := image.NewGray(image.Rect(0, 0, width, height))
+			grayImg.Pix = gImg
+
+			return grayImg, nil
 		}
 	}
 }
