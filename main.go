@@ -74,7 +74,7 @@ func main() {
 	log.Info("EMF file reading... done")
 
 	log.Info("Converting EMF file to PNG...")
-	emfFile.DrawToPNG(*outFile)
+	emfFile.DrawToGrayPNG(*outFile)
 	log.Info("Converting EMF file to PNG... done")
 
 }

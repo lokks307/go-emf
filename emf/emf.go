@@ -1,6 +1,9 @@
 package emf
 
 import (
+	"image"
+
+	im "github.com/disintegration/imaging"
 	"github.com/lokks307/go-emf/w32"
 	log "github.com/sirupsen/logrus"
 )
@@ -124,8 +127,15 @@ func (e *EmfContext) ScaleView() {
 	// w32.SetViewportOrgEx(e.MDC, int(-e.XForm.Dx), int(-e.XForm.Dy), nil)
 }
 
-func (e *EmfContext) DrawToImage(pMode int) ([]uint8, int, int, error) {
+func (e *EmfContext) DrawToColorImage(pMode int) (interface{}, error) {
+	return e.drawToImage(pMode, DRAW_COLOR_IMAGE)
+}
 
+func (e *EmfContext) DrawToGrayImage(pMode int) (interface{}, error) {
+	return e.drawToImage(pMode, DRAW_GRAY_IMAGE)
+}
+
+func (e *EmfContext) drawToImage(pMode int, cMode int) (interface{}, error) {
 	bound := e.View
 	device := e.Window
 
@@ -148,15 +158,27 @@ func (e *EmfContext) DrawToImage(pMode int) ([]uint8, int, int, error) {
 	width := int(device.CX)
 	height := int(device.CY)
 
-	if grayImg, err := DeviceContextToImage(e.MDC, width, height); err != nil {
-		return nil, 0, 0, err
+	if gImg, cimg, err := DeviceContextToImage(e.MDC, width, height); err != nil {
+		return nil, err
 	} else {
-		if pMode == CROP_AREA {
-			width := int(bound.Right - bound.Left)
-			height := int(bound.Bottom - bound.Top)
-			return CropImageByte(grayImg, width, height, int(bound.Left), int(bound.Top), int(bound.Right), int(bound.Bottom)), width, height, nil
+
+		if cMode == DRAW_COLOR_IMAGE {
+			if pMode == CROP_AREA {
+				return im.Crop(cimg, image.Rect(int(bound.Left), int(bound.Top), int(bound.Right), int(bound.Bottom))), nil
+			} else {
+				return im.Crop(cimg, image.Rect(0, 0, width, height)), nil
+			}
 		} else {
-			return grayImg, width, height, nil
+			if pMode == CROP_AREA {
+				width = int(bound.Right - bound.Left)
+				height = int(bound.Bottom - bound.Top)
+				gImg = CropImageByte(gImg, width, height, int(bound.Left), int(bound.Top), int(bound.Right), int(bound.Bottom))
+			}
+
+			grayImg := image.NewGray(image.Rect(0, 0, width, height))
+			grayImg.Pix = gImg
+
+			return grayImg, nil
 		}
 	}
 }
