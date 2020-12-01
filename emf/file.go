@@ -7,6 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	CROP_AREA = iota
+	PAGE_AREA
+)
+
 type EmfFile struct {
 	Header  *HeaderRecord
 	Records []Recorder
@@ -38,21 +43,16 @@ func ReadFile(data []byte) *EmfFile {
 }
 
 func (f *EmfFile) DrawToPNG(output string) error {
-
-	device := f.Header.Original.Device
-	width := int(device.CX) + 1
-	height := int(device.CY) + 1
-
-	emfdc := NewEmfContext(width, height)
+	emfdc := NewEmfContext(f.Header.Original.Bounds, f.Header.Original.Device)
 
 	for idx := range f.Records {
 		f.Records[idx].Draw(emfdc)
 	}
 
-	var img *image.RGBA
+	var img *image.NRGBA
 	var err error
 
-	img, err = emfdc.DrawToImage()
+	img, err = emfdc.DrawToImage(PAGE_AREA)
 	if err != nil {
 		log.Error(err)
 		return err

@@ -93,6 +93,7 @@ var (
 	modifyWorldTransform      = gdi32.NewProc("ModifyWorldTransform")
 	beginPath                 = gdi32.NewProc("BeginPath")
 	endPath                   = gdi32.NewProc("EndPath")
+	abortPath                 = gdi32.NewProc("AbortPath")
 	closeFigure               = gdi32.NewProc("CloseFigure")
 	fillPath                  = gdi32.NewProc("FillPath")
 	strokeAndFillPath         = gdi32.NewProc("StrokeAndFillPath")
@@ -119,6 +120,7 @@ var (
 	createDIBitmap            = gdi32.NewProc("CreateDIBitmap")
 	setMiterLimit             = gdi32.NewProc("SetMiterLimit")
 	extSelectClipRgn          = gdi32.NewProc("ExtSelectClipRgn")
+	selectClipPath            = gdi32.NewProc("SelectClipPath")
 )
 
 func GetDeviceCaps(hdc HDC, index int) int {
@@ -526,7 +528,7 @@ func StretchBlt(hdcDest HDC, nXOriginDest, nYOriginDest, nWidthDest, nHeightDest
 	return ret != 0
 }
 
-func SetDIBitsToDevice(hdc HDC, xDest, yDest, dwWidth, dwHeight, xSrc, ySrc int, uStartScan, cScanLines uint, lpvBits []byte, lpbmi *BITMAPINFO, fuColorUse uint) int {
+func SetDIBitsToDevice(hdc HDC, xDest, yDest int, dwWidth, dwHeight DWORD, xSrc, ySrc int, uStartScan, cScanLines UINT, lpvBits []byte, lpbmi *BITMAPINFO, fuColorUse UINT) int {
 	if len(lpvBits) == 0 {
 		return 0
 	}
@@ -950,6 +952,13 @@ func EndPath(hdc HDC) bool {
 	return ret != 0
 }
 
+func AbortPath(hdc HDC) bool {
+	ret, _, _ := abortPath.Call(
+		uintptr(hdc),
+	)
+	return ret != 0
+}
+
 func CloseFigure(hdc HDC) bool {
 	ret, _, _ := closeFigure.Call(
 		uintptr(hdc),
@@ -1226,4 +1235,12 @@ func ExtSelectClipRgn(hdc HDC, hgrn HRGN, mode int) int {
 		uintptr(mode),
 	)
 	return int(ret)
+}
+
+func SelectClipPath(hdc HDC, mode int) bool {
+	ret, _, _ := selectClipPath.Call(
+		uintptr(hdc),
+		uintptr(mode),
+	)
+	return ret != 0
 }
