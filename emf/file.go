@@ -34,6 +34,7 @@ func ReadFile(data []byte) *EmfFile {
 			emfFile.Header = rec
 		case *EofRecord:
 			emfFile.Eof = rec
+			return emfFile
 		default:
 			emfFile.Records = append(emfFile.Records, rec)
 		}

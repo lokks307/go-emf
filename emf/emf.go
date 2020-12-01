@@ -124,7 +124,6 @@ func (e *EmfContext) ScaleXForm(m11, m22, dx, dy float32) {
 }
 
 func (e *EmfContext) ScaleView() {
-	log.Info("XFORM = ", e.XForm)
 	w32.SetWindowExtEx(e.MDC, int(float32(e.Window.CX)*e.XForm.M11), int(float32(e.Window.CY)*e.XForm.M22), nil)
 	w32.SetViewportExtEx(e.MDC, int(float32(e.View.Right-e.View.Left)*e.XForm.M11), int(float32(e.View.Bottom-e.View.Top)*e.XForm.M22), nil)
 	// w32.SetWindowOrgEx(e.MDC, int(e.XForm.Dx), int(e.XForm.Dy), nil)

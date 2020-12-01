@@ -73,9 +73,6 @@ func readBitBltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *BitBltRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_BITBLT")
 
-	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
-
 	if r.OffBmiSrc > 0 {
 
 		BitsData := PixelConvert(r.BitsSrc, int(r.BmiSrc.BiWidth), int(-r.BmiSrc.BiHeight), int(r.BmiSrc.BiBitCount), ctx.BitCount)
@@ -91,6 +88,9 @@ func (r *BitBltRecord) Draw(ctx *EmfContext) {
 			w32.DWORD(r.BitBltROP)) {
 			log.Error("failed to run BitBlt")
 		}
+
+		w32.DeleteObject(w32.HGDIOBJ(hbitmap))
+		w32.DeleteDC(srcDC)
 
 	}
 }
@@ -190,6 +190,9 @@ func (r *MaskBltRecord) Draw(ctx *EmfContext) {
 		log.Error("failed to run MaskBlt")
 	}
 
+	w32.DeleteObject(w32.HGDIOBJ(hbitmap))
+	w32.DeleteDC(srcDC)
+
 }
 
 type StretchbltRecord struct {
@@ -247,9 +250,6 @@ func readStretchBltRecord(reader *bytes.Reader, size uint32) (Recorder, error) {
 func (r *StretchbltRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STRETCHBLT")
 
-	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
-
 	if r.OffBmiSrc > 0 {
 
 		BitsData := PixelConvert(r.BitsSrc, int(r.BmiSrc.BiWidth), int(-r.BmiSrc.BiHeight), int(r.BmiSrc.BiBitCount), ctx.BitCount)
@@ -265,6 +265,9 @@ func (r *StretchbltRecord) Draw(ctx *EmfContext) {
 			w32.DWORD(r.BitBltROP)) {
 			log.Error("failed to run StretchBlt")
 		}
+
+		w32.DeleteObject(w32.HGDIOBJ(hbitmap))
+		w32.DeleteDC(srcDC)
 	}
 }
 
@@ -328,9 +331,6 @@ func readStretchDIBitsRecord(reader *bytes.Reader, size uint32) (Recorder, error
 
 func (r *StretchDIBitsRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_STRETCHDIBITS")
-
-	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if r.OffBmiSrc > 0 {
 
@@ -406,9 +406,6 @@ func readSetDIBitsToDeviceRecord(reader *bytes.Reader, size uint32) (Recorder, e
 
 func (r *SetDIBitsToDeviceRecord) Draw(ctx *EmfContext) {
 	log.Trace("Draw EMR_SETDIBITSTODEVICE")
-
-	// hrgn := w32.CreateRectRgn(int(r.Bounds.Left), int(r.Bounds.Top), int(r.Bounds.Right), int(r.Bounds.Bottom))
-	// w32.SelectObject(ctx.MDC, w32.HGDIOBJ(hrgn))
 
 	if r.OffBmiSrc > 0 {
 

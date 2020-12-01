@@ -45,12 +45,12 @@ func PixelConvertFromMonochrome(src []byte, width, height, destBppBit int) []byt
 
 	dest := make([]byte, numPixels*destBppByte+destPadding*height)
 
+	// TODO : complete codes
+
 	return dest
 }
 
 func PixelConvert(src []byte, width, height, srcBppBit, destBppBit int) []byte {
-
-	//log.Info("PixelConvert: ", srcBppBit, "=>", destBppBit)
 
 	if srcBppBit == destBppBit {
 		return src
@@ -112,11 +112,11 @@ func DeviceContextToImage(srcDC w32.HDC, width, height int) (*image.RGBA, error)
 
 	bitmap := w32.CreateCompatibleBitmap(srcDC, width, height)
 
-	old := w32.SelectObject(destDC, w32.HGDIOBJ(bitmap)) // attach bitmap to destDC
-	if old == 0 {
+	oobj := w32.SelectObject(destDC, w32.HGDIOBJ(bitmap)) // attach bitmap to destDC
+	if oobj == 0 {
 		return nil, errors.New("SelectObject failed")
 	}
-	defer w32.SelectObject(destDC, old)
+	defer w32.SelectObject(destDC, oobj)
 
 	if bitmap == 0 {
 		return nil, errors.New("CreateCompatibleBitmap failed")
