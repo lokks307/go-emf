@@ -7,7 +7,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/lokks307/go-emf/w32"
+	"github.com/lokks307-dev/go-emf/w32"
 	log "github.com/sirupsen/logrus"
 )
 

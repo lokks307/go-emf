@@ -1,4 +1,4 @@
-module github.com/lokks307/go-emf
+module github.com/lokks307-dev/go-emf
 
 go 1.15
 
@@ -10,6 +10,6 @@ require (
 )
 
 replace (
-	github.com/lokks307/go-emf/emf => ./emf
-	github.com/lokks307/go-emf/w32 => ./w32
+	github.com/lokks307-dev/go-emf/emf => ./emf
+	github.com/lokks307-dev/go-emf/w32 => ./w32
 )
