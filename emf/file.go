@@ -2,6 +2,7 @@ package emf
 
 import (
 	"bytes"
+	"image"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -53,6 +54,42 @@ func (f *EmfFile) DrawToGrayPNG(output string) error {
 
 func (f *EmfFile) DrawToColorPNG(output string) error {
 	return f.drawToPNG(output, DRAW_COLOR_IMAGE)
+}
+
+func (f *EmfFile) DrawToImg(mode int) (image.Image, error) {
+	emfdc := NewEmfContext(f.Header.Original.Bounds, f.Header.Original.Device)
+
+	for idx := range f.Records {
+		f.Records[idx].Draw(emfdc)
+	}
+
+	var img interface{}
+	var err error
+
+	if mode == DRAW_COLOR_IMAGE {
+		img, err = emfdc.DrawToColorImage(PAGE_AREA)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+
+	} else {
+		img, err = emfdc.DrawToGrayImage(PAGE_AREA)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+	}
+
+	var imgx image.Image
+	switch t := img.(type) {
+	case *image.NRGBA:
+		imgx = t
+	case *image.Gray:
+		imgx = t
+	}
+
+	return imgx, nil
 }
 
 func (f *EmfFile) drawToPNG(output string, mode int) error {
