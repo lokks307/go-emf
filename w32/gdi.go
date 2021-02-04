@@ -360,7 +360,7 @@ func GetObject(hgdiobj HGDIOBJ, cbBuffer uintptr, lpvObject unsafe.Pointer) int 
 	return int(ret)
 }
 
-func GetStockObject(fnObject int) HGDIOBJ {
+func GetStockObject(fnObject uint32) HGDIOBJ {
 	ret, _, _ := getStockObject.Call(uintptr(fnObject))
 	return HGDIOBJ(ret)
 }
