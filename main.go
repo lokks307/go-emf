@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lokks307-dev/go-emf/emf"
+	"github.com/lokks307/go-emf/emf"
 	"github.com/mattn/go-colorable"
 	log "github.com/sirupsen/logrus"
 )
